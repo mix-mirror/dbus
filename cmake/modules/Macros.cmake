@@ -334,6 +334,27 @@ macro(check_auto_option _name _text _var _vartext)
 endmacro()
 
 #
+# Set the state of a variable depending on the state of an 'auto' option
+# and a system property.
+#
+# _name: name of a variable ENABLE_FOO representing a tristate ON/OFF/AUTO feature
+# _var: name of a variable representing a system property we checked for,
+#       such as an executable that must exist for the feature enabled by _name to work
+# _result: name of the variable to which the determined state is assigned
+#
+macro(set_from_auto_option _name _var _result)
+    set(_nameval ${${_name}})
+    set(_varval ${${_var}})
+    if(NOT _nameval OR (_nameval AND NOT _varval))
+        #message("debug: _name ${_name} = ${_nameval}  _var ${_var} = ${_varval} ${_result} -> OFF")
+        set(${_result} OFF PARENT_SCOPE)
+    else()
+        #message("debug: _name ${_name} = ${_nameval}  _var ${_var} = ${_varval} ${_result} -> ON")
+        set(${_result} ON PARENT_SCOPE)
+    endif()
+endmacro()
+
+#
 # Provide option that takes a path
 #
 macro(add_path_option _name _text _default)
