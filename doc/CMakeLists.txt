@@ -7,9 +7,11 @@ find_package(Doxygen)
 add_custom_target(doc ALL)
 
 if(DOXYGEN_EXECUTABLE)
-    option(DBUS_ENABLE_DOXYGEN_DOCS "build DOXYGEN documentation (requires Doxygen)" ON)
+    add_multi_option(DBUS_ENABLE_DOXYGEN_DOCS "build DOXYGEN documentation (requires Doxygen)" AUTO "OFF;ON;AUTO")
     add_auto_option(ENABLE_QT_HELP "build qt help documentation (requires qhelpgenerator(-qt5)); set INSTALL_QCH_DIR for custom qch installation path" AUTO)
 endif()
+
+check_multi_option(DBUS_ENABLE_DOXYGEN_DOCS "doxygen documentation" DOXYGEN_EXECUTABLE "doxygen")
 
 set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/api)
 if(DBUS_ENABLE_DOXYGEN_DOCS)
