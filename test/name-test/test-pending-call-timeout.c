@@ -1,3 +1,7 @@
+/*
+ * SPDX-License-Identifier: AFL-2.1 OR GPL-2.0-or-later
+ */
+
 /**
 * Test to make sure that pending calls succeed when given a default,
 * specific and infinite timeout.
