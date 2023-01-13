@@ -37,6 +37,8 @@
 #ifdef DBUS_USE_OUTPUT_DEBUG_STRING
 #include <windows.h>
 #include <mbstring.h>
+#elif defined(HAVE_LTTNG)
+#include "dbus-lttng-verbose-tp.h"
 #endif
 
 /**
@@ -467,7 +469,7 @@ _dbus_verbose_real (
   if (!_dbus_is_verbose_real())
     return;
 
-#ifndef DBUS_USE_OUTPUT_DEBUG_STRING
+#if !defined(DBUS_USE_OUTPUT_DEBUG_STRING) && !defined(HAVE_LTTNG)
   /* Print out pid before the line */
   if (need_pid)
     {
@@ -515,6 +517,25 @@ out:
       {
         OutputDebugStringA (message);
       }
+    _dbus_string_free (&out);
+  }
+#elif defined(HAVE_LTTNG)
+  {
+    DBusString out = _DBUS_STRING_INIT_INVALID;
+    const char *message = NULL;
+
+    if (!_dbus_string_init (&out))
+      goto out;
+
+#ifdef DBUS_CPP_SUPPORTS_VARIABLE_MACRO_ARGUMENTS
+    if (!_dbus_string_append_printf (&out, "[%s(%d):%s] ", _dbus_file_path_extract_elements_from_tail (file, 2), line, function))
+      goto out;
+#endif
+    if (!_dbus_string_append_printf_valist (&out, format, args))
+      goto out;
+    message = _dbus_string_get_const_data (&out);
+out:
+    tracepoint(dbus, verbose, message ? message : "Out of memory while formatting verbose message");
     _dbus_string_free (&out);
   }
 #else

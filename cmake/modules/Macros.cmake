@@ -392,3 +392,24 @@ macro(add_systemd_service file)
         install_symlink(../${_name} ${_linkdir}/${_name})
     endforeach()
 endmacro()
+
+#
+# generate source files from lttng tracepoint template and add to target
+#
+# _target: target to add the generated sources
+# _tpfile: file with lttng tracepoint template
+#
+macro(add_lttng_tracepoint _target _tpfile)
+    string(REPLACE ".tp" "-tp.h" h_file ${_tpfile})
+    string(REPLACE ".tp" "-tp.c" c_file ${_tpfile})
+    get_filename_component(h_file ${h_file} NAME)
+    get_filename_component(c_file ${c_file} NAME)
+    add_custom_command(
+        OUTPUT ${c_file}
+        COMMAND lttng-gen-tp ${CMAKE_CURRENT_SOURCE_DIR}/${_tpfile} -o ${c_file} -o ${h_file}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        DEPENDS ${_tpfile}
+    )
+    set_source_files_properties(${h_file} ${c_file} PROPERTIES GENERATED 1)
+    target_sources(${_target} PRIVATE ${h_file} ${c_file} ${_tpfile})
+endmacro()
