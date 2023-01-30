@@ -689,7 +689,7 @@ _dbus_server_new_for_domain_socket (const char     *path,
  * @param error location to store reason for failure.
  * @returns the new server, or #NULL on failure.
  */
-static DBusServer *
+DBusServer *
 _dbus_server_new_for_dir (const char       *dir,
                           DBusError        *error)
 {

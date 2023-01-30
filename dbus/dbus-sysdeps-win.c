@@ -4517,5 +4517,37 @@ _dbus_listen_unix_socket (const char     *path,
   return s;
 }
 
+/**
+ * Checks and returns result for availability of unix domain sockets on Windows
+ *
+ * @param supported returns whether unix domain sockets are supported
+ * @param error return location for an error
+ * @returns #FALSE if error is set
+ */
+dbus_bool_t
+_dbus_win_check_af_unix_support (dbus_bool_t *supported,
+                                 DBusError   *error)
+{
+  SOCKET temp;
+
+  if (!_dbus_win_startup_winsock ())
+    {
+      _DBUS_SET_OOM (error);
+      return FALSE;
+    }
+
+  *supported = FALSE;
+
+  temp = socket (AF_UNIX, SOCK_STREAM, 0);
+
+  if (temp != INVALID_SOCKET)
+    {
+      *supported = TRUE;
+      closesocket (temp);
+    }
+
+  return TRUE;
+}
+
 /** @} end of sysdeps-win */
 /* tests in dbus-sysdeps-util.c */

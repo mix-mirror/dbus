@@ -66,12 +66,25 @@ _dbus_server_listen_platform_specific (DBusAddressEntry *entry,
       const char *port = "0";
       const char *family = "ipv4";
       const char *scope = dbus_address_entry_get_value (entry, "scope");
+      dbus_bool_t supported = FALSE;
 
       if (_dbus_daemon_is_session_bus_address_published (scope))
           return DBUS_SERVER_LISTEN_ADDRESS_ALREADY_USED;
 
-      *server_p = _dbus_server_new_for_tcp_socket (host, bind, port,
-                                                   family, error, FALSE);
+      if (!_dbus_win_check_af_unix_support (&supported, error))
+        {
+          _DBUS_ASSERT_ERROR_IS_SET(error);
+          return DBUS_SERVER_LISTEN_DID_NOT_CONNECT;
+        }
+
+      if (supported)
+        {
+          const char *tmp = _dbus_get_tmpdir ();
+          *server_p = _dbus_server_new_for_dir (tmp, error);
+        }
+      else
+        *server_p = _dbus_server_new_for_tcp_socket (host, bind, port,
+                                                     family, error, FALSE);
       if (*server_p)
         {
           _DBUS_ASSERT_ERROR_IS_CLEAR(error);
