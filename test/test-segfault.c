@@ -1,4 +1,6 @@
 /*
+ * Copyright 2003 Havoc Pennington  <hp@redhat.com>
+ *
  * SPDX-License-Identifier: AFL-2.1 OR GPL-2.0-or-later
  */
 

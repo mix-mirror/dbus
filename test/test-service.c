@@ -1,4 +1,9 @@
 /*
+ * Copyright 2003 Havoc Pennington <hp@redhat.com>
+ * Copyright 2005 John (J5) Palmieri <johnp@redhat.com>
+ * Copyright 2009 Scott James Remnant <scott@ubuntu.com>
+ * Copyright 2009 Colin Walters <walters@verbum.org>
+ *
  * SPDX-License-Identifier: AFL-2.1 OR GPL-2.0-or-later
  */
 
