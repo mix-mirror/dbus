@@ -1,4 +1,10 @@
 /*
+ * Copyright (C) 2009 Endless OS Foundation, LLC
+ * Copyright (C) 2009 Canonical Ltd.
+ * Copyright (C) 2012 Red Hat, Inc.
+ * Copyright (C) 2016, 2018 Collabora Ltd.
+ * Copyright (C) 2023 Alexander Kanavin and/or Linutronix
+ *
  * SPDX-License-Identifier: AFL-2.1 OR GPL-2.0-or-later
  */
 
