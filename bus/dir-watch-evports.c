@@ -1,7 +1,7 @@
 /* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; -*- */
 /* dir-watch-evports.c  OS specific directory change notification for message bus
  *
- * Copyright (C) 2024 Oracle and/or its affiliates.
+ * Copyright (C) 2025 Oracle and/or its affiliates.
  *
  * SPDX-License-Identifier: AFL-2.1 OR GPL-2.0-or-later
  *
