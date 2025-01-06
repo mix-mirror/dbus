@@ -112,6 +112,8 @@ libdbus_daemon_internal_sources = [
 
 if use_kqueue
     libdbus_daemon_internal_sources += 'dir-watch-kqueue.c'
+elif use_evports
+    libdbus_daemon_internal_sources += 'dir-watch-evports.c'
 elif use_inotify
     libdbus_daemon_internal_sources += 'dir-watch-inotify.c'
 else

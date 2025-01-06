@@ -214,6 +214,10 @@ DBUS_BUS_ENABLE_INOTIFY:BOOL=ON
 // enable kqueue as dir watch backend
 DBUS_BUS_ENABLE_KQUEUE:BOOL=ON
 
+*Solaris only:
+// enable evports as dir watch backend
+DBUS_BUS_ENABLE_EVPORTS:BOOL=ON
+
 x11 only:
 // Build with X11 auto launch support
 DBUS_BUILD_X11:BOOL=ON
