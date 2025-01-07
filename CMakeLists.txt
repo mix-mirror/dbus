@@ -498,7 +498,7 @@ endif()
 
 string(TOUPPER ${CMAKE_SYSTEM_NAME} sysname)
 if("${sysname}" MATCHES ".*SOLARIS.*")
-    option(DBUS_BUS_ENABLE_EVPORTS "build with evports support (solaris only)" ON)
+    option(DBUS_BUS_ENABLE_EVPORTS "build with event ports support (solaris only)" ON)
     if(DBUS_BUS_ENABLE_EVPORTS)
         if(NOT HAVE_PORT_H)
             message(FATAL_ERROR "port.h not found!")

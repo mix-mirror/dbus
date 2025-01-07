@@ -215,7 +215,7 @@ DBUS_BUS_ENABLE_INOTIFY:BOOL=ON
 DBUS_BUS_ENABLE_KQUEUE:BOOL=ON
 
 *Solaris only:
-// enable evports as dir watch backend
+// enable event ports as dir watch backend
 DBUS_BUS_ENABLE_EVPORTS:BOOL=ON
 
 x11 only:

@@ -134,7 +134,7 @@ option(
   'evports',
   type: 'feature',
   value: 'auto',
-  description: 'event port support'
+  description: 'Event ports support'
 )
 
 option(
