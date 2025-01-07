@@ -328,6 +328,7 @@ case "$ci_buildsys" in
                 set -- -Depoll=disabled "$@"
                 set -- -Dinotify=disabled "$@"
                 set -- -Dkqueue=disabled "$@"
+                set -- -Devports=disabled "$@"
                 set -- -Dlaunchd=disabled "$@"
                 set -- -Dlibaudit=disabled "$@"
                 set -- -Dselinux=disabled "$@"
