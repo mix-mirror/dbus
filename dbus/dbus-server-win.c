@@ -83,8 +83,11 @@ _dbus_server_listen_platform_specific (DBusAddressEntry *entry,
           *server_p = _dbus_server_new_for_dir (tmp, error);
         }
       else
-        *server_p = _dbus_server_new_for_tcp_socket (host, bind, port,
-                                                     family, error, FALSE);
+        {
+          *server_p = _dbus_server_new_for_tcp_socket (host, bind, port,
+                                                       family, error, FALSE);
+        }
+
       if (*server_p)
         {
           _DBUS_ASSERT_ERROR_IS_CLEAR(error);
