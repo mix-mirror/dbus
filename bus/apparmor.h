@@ -4,6 +4,8 @@
  * Authors: John Johansen <john.johansen@canonical.com>
  *          Tyler Hicks <tyhicks@canonical.com>
  * Based on: selinux.h by Matthew Rickard
+
+ * Copyright (C) 2014-2015 Canonical, Ltd.
  *
  * SPDX-License-Identifier: AFL-2.1 OR GPL-2.0-or-later
  *

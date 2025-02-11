@@ -1,6 +1,9 @@
 /* -*- mode: C; c-file-style: "gnu"; indent-tabs-mode: nil; -*-
  * audit.h - libaudit integration for SELinux and AppArmor
  *
+ * Copyright (C) 2014-2015 Canonical, Ltd.
+ * Copyright (C) 2015 Collabora Ltd.
+ *
  * SPDX-License-Identifier: AFL-2.1 OR GPL-2.0-or-later
  *
  * Licensed under the Academic Free License version 2.1
