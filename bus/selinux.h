@@ -1,6 +1,7 @@
 /* selinux.h  SELinux security check headers for D-BUS
  *
- * Author: Matthew Rickard <mjricka@epoch.ncsc.mil>
+ * Copyright (C) 2004 Matthew Rickard <mjricka@epoch.ncsc.mil>
+ * Copyright (C) 2004, 2005 Colin Walters <walters@redhat.com>
  *
  * SPDX-License-Identifier: AFL-2.1 OR GPL-2.0-or-later
  *
