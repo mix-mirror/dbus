@@ -7,6 +7,8 @@ set(CMAKE_LEGACY_CYGWIN_WIN32 0)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
+message(STATUS "Found CMake: ${CMAKE_COMMAND} (found version \"${CMAKE_VERSION}\")")
+
 # detect version
 include(MacrosMeson)
 meson_init(meson.build)
