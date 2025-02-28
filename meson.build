@@ -353,6 +353,10 @@ else
     data_config.set('DOXYGEN_GENERATE_QHP', 'NO')
 endif
 data_config.set('DOXYGEN_OUTPUT_DIRECTORY', meson.current_build_dir() / 'doc' / 'api')
+data_config.set('DOXYGEN_INPUT', meson.project_source_root() / 'dbus' + ' ' + meson.project_build_root() / 'dbus')
+data_config.set('DOXYGEN_STRIP_FROM_PATH', meson.project_source_root())
+data_config.set('DOXYGEN_STRIP_FROM_INC_PATH', meson.project_source_root())
+data_config.set('DOXYGEN_HAVE_DOT', 'NO')
 data_config.set('top_srcdir', meson.project_source_root())
 data_config.set('top_builddir', meson.project_build_root())
 

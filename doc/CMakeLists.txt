@@ -15,8 +15,6 @@ check_multi_option(DBUS_ENABLE_DOXYGEN_DOCS "doxygen documentation" DOXYGEN_EXEC
 
 set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/api)
 if(DBUS_ENABLE_DOXYGEN_DOCS)
-    set(top_srcdir ${PROJECT_SOURCE_DIR})
-    set(top_builddir ${PROJECT_BINARY_DIR})
     if(WIN32)
         set(DBUS_GENERATE_MAN NO)
     else()
@@ -28,6 +26,25 @@ if(DBUS_ENABLE_DOXYGEN_DOCS)
     find_program(QHELPGENERATOR_EXECUTABLE NAMES qhelpgenerator qhelpgenerator-qt5)
     check_auto_option(ENABLE_QT_HELP "Qt help" QHELPGENERATOR_EXECUTABLE "qhelpgenerator")
     set_from_auto_option(ENABLE_QT_HELP QHELPGENERATOR_EXECUTABLE DBUS_ENABLE_QTHELP_DOCS)
+
+    set(DOXYGEN_INPUT "${PROJECT_SOURCE_DIR}/dbus ${PROJECT_BINARY_DIR}/dbus")
+    file(GLOB api_files "${PROJECT_SOURCE_DIR}/dbus/*.[ch]*")
+    if(DBUS_ENABLE_DOXYGEN_DOCS STREQUAL "FULL")
+        file(GLOB bus_files "${PROJECT_SOURCE_DIR}/bus/*.[ch]*")
+        file(GLOB test_files "${PROJECT_SOURCE_DIR}/test/*.[ch]*")
+        set(DOXYGEN_INPUT "${DOXYGEN_INPUT} ${PROJECT_SOURCE_DIR}/bus ${PROJECT_SOURCE_DIR}/test")
+        set(doc_files ${api_files} ${bus_files} ${test_files})
+        find_program(DOT_EXECUTABLE NAMES dot)
+        if(DOT_EXECUTABLE)
+            set(DOXYGEN_HAVE_DOT YES)
+        endif()
+    else()
+        set(doc_files ${api_files})
+        set(DOXYGEN_HAVE_DOT NO)
+    endif()
+    set(DOXYGEN_STRIP_FROM_PATH ${PROJECT_SOURCE_DIR})
+    set(DOXYGEN_STRIP_FROM_INC_PATH ${PROJECT_SOURCE_DIR})
+
     if(DBUS_ENABLE_QTHELP_DOCS)
         message(STATUS "${QHELPGENERATOR_EXECUTABLE} found")
         set(DOXYGEN_GENERATE_QHP YES)
@@ -37,11 +54,10 @@ if(DBUS_ENABLE_DOXYGEN_DOCS)
     else()
         set(DOXYGEN_GENERATE_QHP NO)
     endif()
-    configure_file(../Doxyfile.in ${PROJECT_BINARY_DIR}/Doxyfile )
-    file(GLOB dbus_files "${PROJECT_SOURCE_DIR}/dbus/*.[ch]*")
+    configure_file(../Doxyfile.in ${PROJECT_BINARY_DIR}/Doxyfile)
     add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/doxygen.stamp
-        DEPENDS ${PROJECT_SOURCE_DIR}/Doxyfile.in  ${PROJECT_BINARY_DIR}/Doxyfile ${dbus_files}
+        DEPENDS ${PROJECT_SOURCE_DIR}/Doxyfile.in  ${PROJECT_BINARY_DIR}/Doxyfile ${doc_files}
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/api/html
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/api/man
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/api/xml
