@@ -485,6 +485,7 @@ config.set('DBUS_HAVE_LINUX_EPOLL', use_linux_epoll)
 
 if get_option('kqueue').disabled()
     use_kqueue = false
+    has_kqueue_cponfork = false
 else
     use_kqueue = (
       cc.has_header('sys/event.h', args: compile_args_c) and
@@ -497,7 +498,13 @@ else
     if get_option('kqueue').enabled() and not use_kqueue
         error('kqueue support requested but not found')
     endif
+    has_kqueue_cponfork = cc.has_define(
+        'KQUEUE_CPONFORK',
+        prefix: '#include <sys/event.h>',
+        args: compile_args_c,
+      )
 endif
+config.set('DBUS_HAVE_KQUEUE_CPONFORK', has_kqueue_cponfork)
 
 if get_option('launchd').disabled()
     use_launchd = false

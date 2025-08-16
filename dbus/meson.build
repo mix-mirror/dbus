@@ -176,6 +176,9 @@ endif
 if use_linux_epoll
     dbus_util_sources += 'dbus-pollable-set-epoll.c'
 endif
+if has_kqueue_cponfork
+    dbus_util_sources += 'dbus-pollable-set-kqueue.c'
+endif
 
 version_script = configure_file(
     input: 'Version.in',

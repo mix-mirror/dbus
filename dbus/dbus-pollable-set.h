@@ -117,9 +117,11 @@ _dbus_pollable_set_poll (DBusPollableSet    *self,
 
 extern DBusPollableSetClass _dbus_pollable_set_poll_class;
 extern DBusPollableSetClass _dbus_pollable_set_epoll_class;
+extern DBusPollableSetClass _dbus_pollable_set_kqueue_class;
 
 DBusPollableSet *_dbus_pollable_set_poll_new  (int  size_hint);
 DBusPollableSet *_dbus_pollable_set_epoll_new (void);
+DBusPollableSet *_dbus_pollable_set_kqueue_new (void);
 
 #endif /* !DOXYGEN_SHOULD_SKIP_THIS */
 #endif /* multiple-inclusion guard */

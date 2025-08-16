@@ -102,6 +102,12 @@ epoll_create1 (EPOLL_CLOEXEC);
 }" DBUS_HAVE_LINUX_EPOLL)
 
 CHECK_C_SOURCE_COMPILES("
+#include <sys/event.h>
+int main() {
+kqueuex (KQUEUE_CLOEXEC | KQUEUE_CPONFORK);
+}" DBUS_HAVE_KQUEUE_CPONFORK)
+
+CHECK_C_SOURCE_COMPILES("
 int main() {
     int a = 4;
     int b = __sync_sub_and_fetch(&a, 4);
