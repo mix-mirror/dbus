@@ -5089,7 +5089,7 @@ _dbus_append_address_from_socket (DBusSocket  fd,
       struct sockaddr_in ipv4;
       struct sockaddr_in6 ipv6;
   } socket;
-  char hostip[INET6_ADDRSTRLEN];
+  char hostip[INET6_ADDRSTRLEN] = { '\0' };
   socklen_t size = sizeof (socket);
   DBusString path_str;
   const char *family_name = NULL;
