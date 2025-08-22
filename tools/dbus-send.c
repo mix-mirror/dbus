@@ -146,7 +146,7 @@ append_arg (DBusMessageIter *iter, int type, const char *value)
       {
         DBusMessageIter subiter;
 
-        char sig[2] = "\0\0";
+        char sig[2] = { '\0' };
         char *subtype = strdup (value);
         char *c = NULL;
 
