@@ -7,3 +7,9 @@ path = ["subprojects/**.wrap"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = ["© 2022-2023 Meson contributors"]
 SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "doc/*.xml.in"
+precedence = "aggregate"
+SPDX-FileCopyrightText = ["(c) 2003 Red Hat, Inc."]
+SPDX-License-Identifier = "AFL-2.1 OR GPL-2.0-or-later"
