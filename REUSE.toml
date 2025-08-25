@@ -1,0 +1,9 @@
+version = 1
+SPDX-PackageName = "dbus"
+SPDX-PackageDownloadLocation = "https://gitlab.freedesktop.org/dbus/dbus"
+
+[[annotations]]
+path = ["subprojects/**.wrap"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = ["© 2022-2023 Meson contributors"]
+SPDX-License-Identifier = "MIT"
