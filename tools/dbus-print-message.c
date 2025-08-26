@@ -134,8 +134,8 @@ print_ay (DBusMessageIter *iter, int depth)
 
   for (i = 0; i < len; i++)
     {
-      if ((bytes[i] < 32 || bytes[i] > 126) &&
-          (i < len - 1 || bytes[i] != '\0'))
+      if ((i < len - 1 || bytes[i] != '\0') &&
+          (bytes[i] < 32 || bytes[i] > 126))
         {
           all_ascii = FALSE;
           break;
