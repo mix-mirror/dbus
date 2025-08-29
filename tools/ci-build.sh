@@ -377,6 +377,7 @@ case "$ci_buildsys" in
                         fi
 
                         set -- -Db_pie=true "$@"
+                        set -- -Dcontainers=true "$@"
                         set -- -Duser_session=true "$@"
                         ;;
                 esac
@@ -401,6 +402,7 @@ case "$ci_buildsys" in
                 set "$@" -Dlibaudit=disabled -Dvalgrind=disabled
                 # Disable optional features, some of which are on by
                 # default
+                set "$@" -Dcontainers=false
                 set "$@" -Dstats=false
                 set "$@" -Duser_session=false
                 shift
@@ -461,6 +463,12 @@ case "$ci_buildsys" in
 
         $meson_setup "$@" "$srcdir"
         meson compile -v
+
+        if [ "$(id -u)" = 0 ]; then
+            # In production, this would be /run/dbus/containers and would
+            # have been set up by the init script or tmpfiles.d
+            mkdir -p /var/local/run/dbus/containers
+        fi
 
         # This is too slow and verbose to keep enabled at the moment
         export DBUS_TEST_MALLOC_FAILURES=0

@@ -32,7 +32,7 @@
 
 typedef enum
 {
-  BUS_EXTRA_HEADERS_CONTAINER_INSTANCE = (1 << 0),
+  BUS_EXTRA_HEADERS_CONTAINER_PATH = (1 << 0),
   BUS_EXTRA_HEADERS_NONE = 0
 } BusExtraHeaders;
 

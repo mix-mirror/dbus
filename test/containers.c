@@ -47,8 +47,6 @@
 
 #include "test-utils-glib.h"
 
-#define DBUS_INTERFACE_CONTAINERS1    "org.freedesktop.DBus.Containers1"
-
 typedef struct {
     TestMainContext *ctx;
     gboolean skip;
@@ -58,7 +56,7 @@ typedef struct {
 
     GDBusProxy *proxy;
 
-    gchar *instance_path;
+    gchar *server_path;
     gchar *socket_path;
     gchar *socket_dbus_address;
     GDBusConnection *unconfined_conn;
@@ -67,10 +65,11 @@ typedef struct {
 
     GDBusConnection *observer_conn;
     GDBusProxy *observer_proxy;
-    GHashTable *containers_removed;
+    GHashTable *servers_removed;
     guint removed_sub;
     DBusConnection *libdbus_observer;
     DBusMessage *latest_shout;
+    int stop_on_notify_pipe_write_end;
 } Fixture;
 
 typedef struct
@@ -82,6 +81,8 @@ typedef struct
       STOP_SERVER_DISCONNECT_FIRST,
       STOP_SERVER_NEVER_CONNECTED,
       STOP_SERVER_FORCE,
+      STOP_SERVER_VIA_NOTIFY,
+      STOP_SERVER_VIA_NOTIFY_NOT_MANAGER,
       STOP_SERVER_WITH_MANAGER
     }
   stop_server;
@@ -138,13 +139,13 @@ observe_shouting_cb (DBusConnection *observer,
 }
 
 static void
-instance_removed_cb (GDBusConnection *observer,
-                     const gchar *sender,
-                     const gchar *path,
-                     const gchar *iface,
-                     const gchar *member,
-                     GVariant *parameters,
-                     gpointer user_data)
+server_removed_cb (GDBusConnection *observer,
+                   const gchar *sender,
+                   const gchar *path,
+                   const gchar *iface,
+                   const gchar *member,
+                   GVariant *parameters,
+                   gpointer user_data)
 {
   Fixture *f = user_data;
   const gchar *container;
@@ -152,11 +153,11 @@ instance_removed_cb (GDBusConnection *observer,
   g_assert_cmpstr (sender, ==, DBUS_SERVICE_DBUS);
   g_assert_cmpstr (path, ==, DBUS_PATH_DBUS);
   g_assert_cmpstr (iface, ==, DBUS_INTERFACE_CONTAINERS1);
-  g_assert_cmpstr (member, ==, "InstanceRemoved");
+  g_assert_cmpstr (member, ==, "ServerRemoved");
   g_assert_cmpstr (g_variant_get_type_string (parameters), ==, "(o)");
   g_variant_get (parameters, "(&o)", &container);
-  g_assert (!g_hash_table_contains (f->containers_removed, container));
-  g_hash_table_add (f->containers_removed, g_strdup (container));
+  g_assert (!g_hash_table_contains (f->servers_removed, container));
+  g_hash_table_add (f->servers_removed, g_strdup (container));
 }
 
 static void
@@ -176,6 +177,33 @@ fixture_disconnect_unconfined (Fixture *f)
 
   g_clear_object (&f->unconfined_conn);
 }
+
+#ifdef DBUS_ENABLE_CONTAINERS
+static void
+fixture_disconnect_unconfined_and_wait (Fixture *f)
+{
+  guint name_watch;
+  gboolean gone = FALSE;
+
+  /* Close the unconfined connection (the container manager) and wait
+   * for it to go away */
+  g_test_message ("Closing container manager...");
+  name_watch = g_bus_watch_name_on_connection (f->confined_conn,
+                                               f->unconfined_unique_name,
+                                               G_BUS_NAME_WATCHER_FLAGS_NONE,
+                                               NULL,
+                                               name_gone_set_boolean_cb,
+                                               &gone, NULL);
+  fixture_disconnect_unconfined (f);
+
+  g_test_message ("Waiting for container manager bus name to disappear...");
+
+  while (!gone)
+    g_main_context_iteration (NULL, TRUE);
+
+  g_bus_unwatch_name (name_watch);
+}
+#endif
 
 static void
 fixture_disconnect_observer (Fixture *f)
@@ -233,15 +261,15 @@ setup (Fixture *f,
        G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT),
       NULL, NULL, &f->error);
   g_assert_no_error (f->error);
-  f->containers_removed = g_hash_table_new_full (g_str_hash, g_str_equal,
-                                                 g_free, NULL);
+  f->servers_removed = g_hash_table_new_full (g_str_hash, g_str_equal,
+                                              g_free, NULL);
   f->removed_sub = g_dbus_connection_signal_subscribe (f->observer_conn,
                                                        DBUS_SERVICE_DBUS,
                                                        DBUS_INTERFACE_CONTAINERS1,
-                                                       "InstanceRemoved",
+                                                       "ServerRemoved",
                                                        DBUS_PATH_DBUS, NULL,
                                                        G_DBUS_SIGNAL_FLAGS_NONE,
-                                                       instance_removed_cb,
+                                                       server_removed_cb,
                                                        f, NULL);
 
   /* We have to use libdbus for new header fields, because GDBus doesn't
@@ -253,6 +281,8 @@ setup (Fixture *f,
   if (!dbus_connection_add_filter (f->libdbus_observer, observe_shouting_cb, f,
                                    NULL))
     g_error ("OOM");
+
+  f->stop_on_notify_pipe_write_end = -1;
 }
 
 /*
@@ -265,6 +295,7 @@ test_get_supported_arguments (Fixture *f,
   GVariant *v;
 #ifdef DBUS_ENABLE_CONTAINERS
   const gchar **args;
+  gsize i;
   gsize len;
 #endif
 
@@ -286,8 +317,11 @@ test_get_supported_arguments (Fixture *f,
   g_assert_cmpstr (g_variant_get_type_string (v), ==, "as");
   args = g_variant_get_strv (v, &len);
 
-  /* No arguments are defined yet */
-  g_assert_cmpuint (len, ==, 0);
+  g_assert_cmpuint (len, ==, 2);
+  i = 0;
+  g_assert_cmpstr (args[i++], ==, "StopOnDisconnect");
+  g_assert_cmpstr (args[i++], ==, "StopOnNotify");
+  g_assert_cmpstr (args[i++], ==, NULL);
 
   g_free (args);
   g_variant_unref (v);
@@ -308,10 +342,15 @@ test_get_supported_arguments (Fixture *f,
  */
 static gboolean
 add_container_server (Fixture *f,
-                      GVariant *parameters)
+                      GVariant *parameters,
+                      GUnixFDList *fds,
+                      GUnixFDList **fds_out)
 {
   GVariant *tuple;
+  GVariant *named_results;
   GStatBuf stat_buf;
+  gboolean found;
+  gchar *stringified_args;
 
   f->proxy = g_dbus_proxy_new_sync (f->unconfined_conn,
                                     G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
@@ -320,9 +359,33 @@ add_container_server (Fixture *f,
                                     NULL, &f->error);
   g_assert_no_error (f->error);
 
-  g_test_message ("Calling AddServer...");
-  tuple = g_dbus_proxy_call_sync (f->proxy, "AddServer", parameters,
-                                  G_DBUS_CALL_FLAGS_NONE, -1, NULL, &f->error);
+  stringified_args = g_variant_print (parameters, TRUE);
+  g_test_message ("Calling AddServer%s...", stringified_args);
+  g_free (stringified_args);
+
+  if (fds != NULL || fds_out != NULL)
+    {
+      if (fds != NULL)
+        g_test_message ("Sending %d fds", g_unix_fd_list_get_length (fds));
+
+      if (fds_out != NULL)
+        g_test_message ("Expecting to receive fds in result");
+
+      tuple = g_dbus_proxy_call_with_unix_fd_list_sync (f->proxy,
+                                                        "AddServer",
+                                                        parameters,
+                                                        G_DBUS_CALL_FLAGS_NONE,
+                                                        -1,
+                                                        fds,
+                                                        fds_out,
+                                                        NULL,
+                                                        &f->error);
+    }
+  else
+    {
+      tuple = g_dbus_proxy_call_sync (f->proxy, "AddServer", parameters,
+                                      G_DBUS_CALL_FLAGS_NONE, -1, NULL, &f->error);
+    }
 
   /* For root, the sockets go in /run/dbus/containers, which we rely on
    * system infrastructure to create; so it's OK for AddServer to fail
@@ -341,22 +404,34 @@ add_container_server (Fixture *f,
   g_assert_no_error (f->error);
   g_assert_nonnull (tuple);
 
-  g_assert_cmpstr (g_variant_get_type_string (tuple), ==, "(oays)");
-  g_variant_get (tuple, "(o^ays)", &f->instance_path, &f->socket_path,
-                 &f->socket_dbus_address);
+  stringified_args = g_variant_print (tuple, TRUE);
+  g_test_message ("-> %s", stringified_args);
+  g_free (stringified_args);
+
+  g_assert_cmpstr (g_variant_get_type_string (tuple), ==, "(oa{sv})");
+  g_variant_get (tuple, "(o@a{sv})", &f->server_path, &named_results);
+  g_assert_nonnull (f->server_path);
+  g_assert_true (g_variant_is_object_path (f->server_path));
+
+  found = g_variant_lookup (named_results, "Address",
+                            "s", &f->socket_dbus_address);
+  g_assert_true (found);
+  g_assert_nonnull (f->socket_dbus_address);
   g_assert_true (g_str_has_prefix (f->socket_dbus_address, "unix:"));
   g_assert_null (strchr (f->socket_dbus_address, ';'));
   g_assert_null (strchr (f->socket_dbus_address + strlen ("unix:"), ':'));
-  g_clear_pointer (&tuple, g_variant_unref);
 
-  g_assert_nonnull (f->instance_path);
-  g_assert_true (g_variant_is_object_path (f->instance_path));
+  found = g_variant_lookup (named_results, "SocketPath",
+                            "^ay", &f->socket_path);
+  g_assert_true (found);
   g_assert_nonnull (f->socket_path);
   g_assert_true (g_path_is_absolute (f->socket_path));
-  g_assert_nonnull (f->socket_dbus_address);
   g_assert_cmpstr (g_stat (f->socket_path, &stat_buf) == 0 ? NULL :
                    g_strerror (errno), ==, NULL);
   g_assert_cmpuint ((stat_buf.st_mode & S_IFMT), ==, S_IFSOCK);
+
+  g_clear_pointer (&named_results, g_variant_unref);
+  g_clear_pointer (&tuple, g_variant_unref);
   return TRUE;
 }
 #endif
@@ -380,7 +455,8 @@ test_basic (Fixture *f,
   GVariantDict dict;
   const gchar *confined_unique_name;
   const gchar *path_from_query;
-  const gchar *name;
+  const gchar *app_id;
+  const gchar *instance_id;
   const gchar *name_owner;
   const gchar *type;
   guint32 uid;
@@ -389,16 +465,18 @@ test_basic (Fixture *f,
   DBusMessage *libdbus_message = NULL;
   DBusMessage *libdbus_reply = NULL;
   DBusError libdbus_error = DBUS_ERROR_INIT;
+  gchar *stringified_result;
 
   if (f->skip)
     return;
 
-  parameters = g_variant_new ("(ssa{sv}a{sv})",
+  parameters = g_variant_new ("(sssa{sv}a{sv})",
                               "com.example.NotFlatpak",
                               "sample-app",
+                              "sample-instance",
                               NULL, /* no metadata */
                               NULL); /* no named arguments */
-  if (!add_container_server (f, g_steal_pointer (&parameters)))
+  if (!add_container_server (f, g_steal_pointer (&parameters), NULL, NULL))
     return;
 
   g_test_message ("Connecting to %s...", f->socket_dbus_address);
@@ -445,7 +523,7 @@ test_basic (Fixture *f,
   while (f->latest_shout == NULL)
     iterate_both_main_loops (f->ctx);
 
-  g_assert_cmpstr (dbus_message_get_container_instance (f->latest_shout), ==,
+  g_assert_cmpstr (dbus_message_get_container_path (f->latest_shout), ==,
                    NULL);
   dbus_clear_message (&f->latest_shout);
 
@@ -456,7 +534,7 @@ test_basic (Fixture *f,
   while (f->latest_shout == NULL)
     iterate_both_main_loops (f->ctx);
 
-  g_assert_cmpstr (dbus_message_get_container_instance (f->latest_shout), ==,
+  g_assert_cmpstr (dbus_message_get_container_path (f->latest_shout), ==,
                    NULL);
   dbus_clear_message (&f->latest_shout);
 
@@ -484,8 +562,8 @@ test_basic (Fixture *f,
   while (f->latest_shout == NULL)
     iterate_both_main_loops (f->ctx);
 
-  g_assert_cmpstr (dbus_message_get_container_instance (f->latest_shout), ==,
-                   f->instance_path);
+  g_assert_cmpstr (dbus_message_get_container_path (f->latest_shout), ==,
+                   f->server_path);
   dbus_clear_message (&f->latest_shout);
 
   g_dbus_connection_emit_signal (f->unconfined_conn, NULL, "/",
@@ -495,7 +573,7 @@ test_basic (Fixture *f,
   while (f->latest_shout == NULL)
     iterate_both_main_loops (f->ctx);
 
-  g_assert_cmpstr (dbus_message_get_container_instance (f->latest_shout), ==,
+  g_assert_cmpstr (dbus_message_get_container_path (f->latest_shout), ==,
                    "/");
   dbus_clear_message (&f->latest_shout);
 
@@ -514,41 +592,50 @@ test_basic (Fixture *f,
 
   g_test_message ("Inspecting connection container info");
   confined_unique_name = g_dbus_connection_get_unique_name (f->confined_conn);
-  tuple = g_dbus_proxy_call_sync (f->proxy, "GetConnectionInstance",
+  tuple = g_dbus_proxy_call_sync (f->proxy, "GetConnectionInfo",
                                   g_variant_new ("(s)", confined_unique_name),
                                   G_DBUS_CALL_FLAGS_NONE, -1, NULL, &f->error);
   g_assert_no_error (f->error);
   g_assert_nonnull (tuple);
-  g_assert_cmpstr (g_variant_get_type_string (tuple), ==, "(oa{sv}ssa{sv})");
-  g_variant_get (tuple, "(&o@a{sv}&s&s@a{sv})",
-                 &path_from_query, &creator, &type, &name, &asv);
-  g_assert_cmpstr (path_from_query, ==, f->instance_path);
+  stringified_result = g_variant_print (tuple, TRUE);
+  g_test_message ("GetConnectionInfo() -> %s", stringified_result);
+  g_free (stringified_result);
+  g_assert_cmpstr (g_variant_get_type_string (tuple), ==, "(oa{sv}sssa{sv})");
+  g_variant_get (tuple, "(&o@a{sv}&s&s&s@a{sv})",
+                 &path_from_query, &creator, &type, &app_id, &instance_id, &asv);
+  g_assert_cmpstr (path_from_query, ==, f->server_path);
   g_variant_dict_init (&dict, creator);
   g_assert_true (g_variant_dict_lookup (&dict, "UnixUserID", "u", &uid));
   g_assert_cmpuint (uid, ==, _dbus_getuid ());
   g_variant_dict_clear (&dict);
   g_assert_cmpstr (type, ==, "com.example.NotFlatpak");
-  g_assert_cmpstr (name, ==, "sample-app");
+  g_assert_cmpstr (app_id, ==, "sample-app");
+  g_assert_cmpstr (instance_id, ==, "sample-instance");
   /* Trivial case: the metadata a{sv} is empty */
   g_assert_cmpuint (g_variant_n_children (asv), ==, 0);
   g_clear_pointer (&asv, g_variant_unref);
   g_clear_pointer (&creator, g_variant_unref);
   g_clear_pointer (&tuple, g_variant_unref);
 
-  g_test_message ("Inspecting container instance info");
-  tuple = g_dbus_proxy_call_sync (f->proxy, "GetInstanceInfo",
-                                  g_variant_new ("(o)", f->instance_path),
+  g_test_message ("Inspecting container server info");
+  tuple = g_dbus_proxy_call_sync (f->proxy, "GetServerInfo",
+                                  g_variant_new ("(o)", f->server_path),
                                   G_DBUS_CALL_FLAGS_NONE, -1, NULL, &f->error);
   g_assert_no_error (f->error);
   g_assert_nonnull (tuple);
-  g_assert_cmpstr (g_variant_get_type_string (tuple), ==, "(a{sv}ssa{sv})");
-  g_variant_get (tuple, "(@a{sv}&s&s@a{sv})", &creator, &type, &name, &asv);
+  stringified_result = g_variant_print (tuple, TRUE);
+  g_test_message ("GetServerInfo() -> %s", stringified_result);
+  g_free (stringified_result);
+  g_assert_cmpstr (g_variant_get_type_string (tuple), ==, "(a{sv}sssa{sv})");
+  g_variant_get (tuple, "(@a{sv}&s&s&s@a{sv})",
+                 &creator, &type, &app_id, &instance_id, &asv);
   g_variant_dict_init (&dict, creator);
   g_assert_true (g_variant_dict_lookup (&dict, "UnixUserID", "u", &uid));
   g_assert_cmpuint (uid, ==, _dbus_getuid ());
   g_variant_dict_clear (&dict);
   g_assert_cmpstr (type, ==, "com.example.NotFlatpak");
-  g_assert_cmpstr (name, ==, "sample-app");
+  g_assert_cmpstr (app_id, ==, "sample-app");
+  g_assert_cmpstr (instance_id, ==, "sample-instance");
   /* Trivial case: the metadata a{sv} is empty */
   g_assert_cmpuint (g_variant_n_children (asv), ==, 0);
   g_clear_pointer (&asv, g_variant_unref);
@@ -584,12 +671,13 @@ test_wrong_uid (Fixture *f,
   if (f->skip)
     return;
 
-  parameters = g_variant_new ("(ssa{sv}a{sv})",
+  parameters = g_variant_new ("(sssa{sv}a{sv})",
                               "com.example.NotFlatpak",
                               "sample-app",
+                              "instance1",
                               NULL, /* no metadata */
                               NULL); /* no named arguments */
-  if (!add_container_server (f, g_steal_pointer (&parameters)))
+  if (!add_container_server (f, g_steal_pointer (&parameters), NULL, NULL))
     return;
 
   g_test_message ("Connecting to %s...", f->socket_dbus_address);
@@ -615,7 +703,8 @@ test_wrong_uid (Fixture *f,
 
 /*
  * Test for non-trivial metadata: assert that the metadata a{sv} is
- * carried through correctly, and that the app name is allowed to be empty.
+ * carried through correctly, and that the app/instance IDs are
+ * allowed to be empty.
  */
 static void
 test_metadata (Fixture *f,
@@ -629,7 +718,8 @@ test_metadata (Fixture *f,
   GVariantDict dict;
   const gchar *confined_unique_name;
   const gchar *path_from_query;
-  const gchar *name;
+  const gchar *app_id;
+  const gchar *instance_id;
   const gchar *type;
   guint32 uid;
   guint u;
@@ -644,13 +734,15 @@ test_metadata (Fixture *f,
   g_variant_dict_insert (&dict, "IsCrepuscular", "b", TRUE);
   g_variant_dict_insert (&dict, "NChildren", "u", 2);
 
-  parameters = g_variant_new ("(ss@a{sv}a{sv})",
+  parameters = g_variant_new ("(sss@a{sv}a{sv})",
                               "org.example.Springwatch",
-                              /* Verify that empty app names are OK */
+                              /* Verify that empty app IDs are OK */
+                              "",
+                              /* Verify that empty instance IDs are OK */
                               "",
                               g_variant_dict_end (&dict),
                               NULL); /* no named arguments */
-  if (!add_container_server (f, g_steal_pointer (&parameters)))
+  if (!add_container_server (f, g_steal_pointer (&parameters), NULL, NULL))
     return;
 
   g_test_message ("Connecting to %s...", f->socket_dbus_address);
@@ -677,29 +769,30 @@ test_metadata (Fixture *f,
   asv = g_variant_get_child_value (tuple, 0);
   g_variant_dict_init (&dict, asv);
   g_assert_true (g_variant_dict_lookup (&dict,
-                                        DBUS_INTERFACE_CONTAINERS1 ".Instance",
+                                        DBUS_INTERFACE_CONTAINERS1 ".Path",
                                         "&o", &path_from_query));
-  g_assert_cmpstr (path_from_query, ==, f->instance_path);
+  g_assert_cmpstr (path_from_query, ==, f->server_path);
   g_variant_dict_clear (&dict);
   g_clear_pointer (&asv, g_variant_unref);
   g_clear_pointer (&tuple, g_variant_unref);
 
   g_test_message ("Inspecting connection container info");
-  tuple = g_dbus_proxy_call_sync (f->proxy, "GetConnectionInstance",
+  tuple = g_dbus_proxy_call_sync (f->proxy, "GetConnectionInfo",
                                   g_variant_new ("(s)", confined_unique_name),
                                   G_DBUS_CALL_FLAGS_NONE, -1, NULL, &f->error);
   g_assert_no_error (f->error);
   g_assert_nonnull (tuple);
-  g_assert_cmpstr (g_variant_get_type_string (tuple), ==, "(oa{sv}ssa{sv})");
-  g_variant_get (tuple, "(&o@a{sv}&s&s@a{sv})",
-                 &path_from_query, &creator, &type, &name, &asv);
-  g_assert_cmpstr (path_from_query, ==, f->instance_path);
+  g_assert_cmpstr (g_variant_get_type_string (tuple), ==, "(oa{sv}sssa{sv})");
+  g_variant_get (tuple, "(&o@a{sv}&s&s&s@a{sv})",
+                 &path_from_query, &creator, &type, &app_id, &instance_id, &asv);
+  g_assert_cmpstr (path_from_query, ==, f->server_path);
   g_variant_dict_init (&dict, creator);
   g_assert_true (g_variant_dict_lookup (&dict, "UnixUserID", "u", &uid));
   g_assert_cmpuint (uid, ==, _dbus_getuid ());
   g_variant_dict_clear (&dict);
   g_assert_cmpstr (type, ==, "org.example.Springwatch");
-  g_assert_cmpstr (name, ==, "");
+  g_assert_cmpstr (app_id, ==, "");
+  g_assert_cmpstr (instance_id, ==, "");
   g_variant_dict_init (&dict, asv);
   g_assert_true (g_variant_dict_lookup (&dict, "NChildren", "u", &u));
   g_assert_cmpuint (u, ==, 2);
@@ -713,20 +806,22 @@ test_metadata (Fixture *f,
   g_clear_pointer (&creator, g_variant_unref);
   g_clear_pointer (&tuple, g_variant_unref);
 
-  g_test_message ("Inspecting container instance info");
-  tuple = g_dbus_proxy_call_sync (f->proxy, "GetInstanceInfo",
-                                  g_variant_new ("(o)", f->instance_path),
+  g_test_message ("Inspecting container server info");
+  tuple = g_dbus_proxy_call_sync (f->proxy, "GetServerInfo",
+                                  g_variant_new ("(o)", f->server_path),
                                   G_DBUS_CALL_FLAGS_NONE, -1, NULL, &f->error);
   g_assert_no_error (f->error);
   g_assert_nonnull (tuple);
-  g_assert_cmpstr (g_variant_get_type_string (tuple), ==, "(a{sv}ssa{sv})");
-  g_variant_get (tuple, "(@a{sv}&s&s@a{sv})", &creator, &type, &name, &asv);
+  g_assert_cmpstr (g_variant_get_type_string (tuple), ==, "(a{sv}sssa{sv})");
+  g_variant_get (tuple, "(@a{sv}&s&s&s@a{sv})",
+                 &creator, &type, &app_id, &instance_id, &asv);
   g_variant_dict_init (&dict, creator);
   g_assert_true (g_variant_dict_lookup (&dict, "UnixUserID", "u", &uid));
   g_assert_cmpuint (uid, ==, _dbus_getuid ());
   g_variant_dict_clear (&dict);
   g_assert_cmpstr (type, ==, "org.example.Springwatch");
-  g_assert_cmpstr (name, ==, "");
+  g_assert_cmpstr (app_id, ==, "");
+  g_assert_cmpstr (instance_id, ==, "");
   g_variant_dict_init (&dict, asv);
   g_assert_true (g_variant_dict_lookup (&dict, "NChildren", "u", &u));
   g_assert_cmpuint (u, ==, 2);
@@ -755,7 +850,7 @@ test_metadata (Fixture *f,
  * Test StopListening(), which just closes the listening socket.
  *
  * With config->stop_server == STOP_SERVER_FORCE:
- * Test StopInstance(), which closes the listening socket and
+ * Test StopServer(), which closes the listening socket and
  * disconnects all its clients.
  */
 static void
@@ -769,14 +864,22 @@ test_stop_server (Fixture *f,
   GDBusProxy *attacker_proxy;
   GSocket *client_socket;
   GSocketAddress *socket_address;
+  GUnixFDList *fds = NULL;
   GVariant *tuple;
+  GVariant *creator;
   GVariant *parameters;
+  GVariant *asv;
+  GVariantDict dict;
+  GVariantDict named_argument_builder;
   gchar *error_name;
+  gchar *stringified_result;
   const gchar *confined_unique_name;
   const gchar *name_owner;
-  gboolean gone = FALSE;
-  guint name_watch;
+  const char *type;
+  const char *app_id;
+  const char *instance_id;
   guint i;
+  guint32 uid;
 
   g_assert_nonnull (config);
 
@@ -791,12 +894,43 @@ test_stop_server (Fixture *f,
                                              &f->error);
   g_assert_no_error (f->error);
 
-  parameters = g_variant_new ("(ssa{sv}a{sv})",
+  g_variant_dict_init (&named_argument_builder, NULL);
+  fds = g_unix_fd_list_new ();
+
+  if (config->stop_server == STOP_SERVER_VIA_NOTIFY_NOT_MANAGER)
+    g_variant_dict_insert (&named_argument_builder, "StopOnDisconnect",
+                           "b", FALSE);
+
+  if (config->stop_server == STOP_SERVER_VIA_NOTIFY ||
+      config->stop_server == STOP_SERVER_VIA_NOTIFY_NOT_MANAGER)
+    {
+      DBusError error = DBUS_ERROR_INIT;
+      int notify_pipe[2];
+      int fd_index;
+
+      _dbus_unix_make_pipe (notify_pipe, &error);
+      test_assert_no_error (&error);
+
+      /* transfer ownership */
+      f->stop_on_notify_pipe_write_end = notify_pipe[1];
+
+      /* duplicate into the fd list and close the original */
+      fd_index = g_unix_fd_list_append (fds, notify_pipe[0], &f->error);
+      g_assert_no_error (f->error);
+      g_assert_cmpint (fd_index, >=, 0);
+      close (notify_pipe[0]);
+
+      g_variant_dict_insert (&named_argument_builder, "StopOnNotify",
+                             "h", fd_index);
+    }
+
+  parameters = g_variant_new ("(sssa{sv}@a{sv})",
                               "com.example.NotFlatpak",
                               "sample-app",
+                              "",
                               NULL, /* no metadata */
-                              NULL); /* no named arguments */
-  if (!add_container_server (f, g_steal_pointer (&parameters)))
+                              g_variant_dict_end (&named_argument_builder));
+  if (!add_container_server (f, g_steal_pointer (&parameters), fds, NULL))
     return;
 
   socket_address = g_unix_socket_address_new (f->socket_path);
@@ -813,6 +947,9 @@ test_stop_server (Fixture *f,
 
       if (config->stop_server == STOP_SERVER_DISCONNECT_FIRST)
         {
+          guint name_watch;
+          gboolean gone = FALSE;
+
           g_test_message ("Disconnecting confined connection...");
           gone = FALSE;
           confined_unique_name = g_dbus_connection_get_unique_name (
@@ -836,7 +973,7 @@ test_stop_server (Fixture *f,
     }
 
   /* If we are able to switch uid (i.e. we are root), check that a local
-   * attacker with a different uid cannot close our container instances. */
+   * attacker with a different uid cannot close our container servers. */
   attacker = test_try_connect_gdbus_as_user (f->bus_address, TEST_USER_OTHER,
                                              &f->error);
 
@@ -851,15 +988,15 @@ test_stop_server (Fixture *f,
       g_assert_no_error (f->error);
 
       tuple = g_dbus_proxy_call_sync (attacker_proxy, "StopListening",
-                                      g_variant_new ("(o)", f->instance_path),
+                                      g_variant_new ("(o)", f->server_path),
                                       G_DBUS_CALL_FLAGS_NONE, -1, NULL,
                                       &f->error);
       g_assert_error (f->error, G_DBUS_ERROR, G_DBUS_ERROR_ACCESS_DENIED);
       g_assert_null (tuple);
       g_clear_error (&f->error);
 
-      tuple = g_dbus_proxy_call_sync (attacker_proxy, "StopInstance",
-                                      g_variant_new ("(o)", f->instance_path),
+      tuple = g_dbus_proxy_call_sync (attacker_proxy, "StopServer",
+                                      g_variant_new ("(o)", f->server_path),
                                       G_DBUS_CALL_FLAGS_NONE, -1, NULL,
                                       &f->error);
       g_assert_error (f->error, G_DBUS_ERROR, G_DBUS_ERROR_ACCESS_DENIED);
@@ -880,46 +1017,32 @@ test_stop_server (Fixture *f,
       g_clear_error (&f->error);
     }
 
-  g_assert_false (g_hash_table_contains (f->containers_removed,
-                                         f->instance_path));
+  g_assert_false (g_hash_table_contains (f->servers_removed,
+                                         f->server_path));
 
   switch (config->stop_server)
     {
       case STOP_SERVER_WITH_MANAGER:
-        /* Close the unconfined connection (the container manager) and wait
-         * for it to go away */
-        g_test_message ("Closing container manager...");
-        name_watch = g_bus_watch_name_on_connection (f->confined_conn,
-                                                     f->unconfined_unique_name,
-                                                     G_BUS_NAME_WATCHER_FLAGS_NONE,
-                                                     NULL,
-                                                     name_gone_set_boolean_cb,
-                                                     &gone, NULL);
-        fixture_disconnect_unconfined (f);
-
-        g_test_message ("Waiting for container manager bus name to disappear...");
-
-        while (!gone)
-          g_main_context_iteration (NULL, TRUE);
-
-        g_bus_unwatch_name (name_watch);
+        g_test_message ("Stopping server (but not confined connection) by "
+                        "disconnecting container manager from bus");
+        fixture_disconnect_unconfined_and_wait (f);
         break;
 
       case STOP_SERVER_EXPLICITLY:
         g_test_message ("Stopping server (but not confined connection)...");
         tuple = g_dbus_proxy_call_sync (f->proxy, "StopListening",
-                                        g_variant_new ("(o)", f->instance_path),
+                                        g_variant_new ("(o)", f->server_path),
                                         G_DBUS_CALL_FLAGS_NONE, -1, NULL,
                                         &f->error);
         g_assert_no_error (f->error);
         g_variant_unref (tuple);
 
-        /* The container instance remains open, because the connection has
+        /* The container server remains open, because the connection has
          * not gone away yet. Do another method call: if we were going to
          * get the signal, it would arrive before the reply to this second
          * method call. Any method will do here, even one that doesn't
          * exist. */
-        g_test_message ("Checking we do not get InstanceRemoved...");
+        g_test_message ("Checking we do not get ServerRemoved...");
         tuple = g_dbus_proxy_call_sync (f->proxy, "NoSuchMethod", NULL,
                                         G_DBUS_CALL_FLAGS_NONE, -1, NULL,
                                         &f->error);
@@ -928,33 +1051,49 @@ test_stop_server (Fixture *f,
         g_clear_error (&f->error);
         break;
 
+      case STOP_SERVER_VIA_NOTIFY_NOT_MANAGER:
+        fixture_disconnect_unconfined_and_wait (f);
+
+        /* Assert that the server is still functional at this point,
+         * because we configured it with StopOnDisconnect=FALSE */
+        g_assert_true (g_file_test (f->socket_path, G_FILE_TEST_EXISTS));
+        /* fall through */
+
+      case STOP_SERVER_VIA_NOTIFY:
+        g_test_message ("Stopping server (but not confined connection) by "
+                        "closing pipe fd");
+        g_close (f->stop_on_notify_pipe_write_end, &f->error);
+        g_assert_no_error (f->error);
+        f->stop_on_notify_pipe_write_end = -1;
+        break;
+
       case STOP_SERVER_DISCONNECT_FIRST:
       case STOP_SERVER_NEVER_CONNECTED:
         g_test_message ("Stopping server (with no confined connections)...");
         tuple = g_dbus_proxy_call_sync (f->proxy, "StopListening",
-                                        g_variant_new ("(o)", f->instance_path),
+                                        g_variant_new ("(o)", f->server_path),
                                         G_DBUS_CALL_FLAGS_NONE, -1, NULL,
                                         &f->error);
         g_assert_no_error (f->error);
         g_variant_unref (tuple);
 
-        g_test_message ("Waiting for InstanceRemoved...");
-        while (!g_hash_table_contains (f->containers_removed, f->instance_path))
+        g_test_message ("Waiting for ServerRemoved...");
+        while (!g_hash_table_contains (f->servers_removed, f->server_path))
           g_main_context_iteration (NULL, TRUE);
 
         break;
 
       case STOP_SERVER_FORCE:
         g_test_message ("Stopping server and all confined connections...");
-        tuple = g_dbus_proxy_call_sync (f->proxy, "StopInstance",
-                                        g_variant_new ("(o)", f->instance_path),
+        tuple = g_dbus_proxy_call_sync (f->proxy, "StopServer",
+                                        g_variant_new ("(o)", f->server_path),
                                         G_DBUS_CALL_FLAGS_NONE, -1, NULL,
                                         &f->error);
         g_assert_no_error (f->error);
         g_variant_unref (tuple);
 
-        g_test_message ("Waiting for InstanceRemoved...");
-        while (!g_hash_table_contains (f->containers_removed, f->instance_path))
+        g_test_message ("Waiting for ServerRemoved...");
+        while (!g_hash_table_contains (f->servers_removed, f->server_path))
           g_main_context_iteration (NULL, TRUE);
 
         break;
@@ -1034,6 +1173,8 @@ test_stop_server (Fixture *f,
         break;
 
       case STOP_SERVER_EXPLICITLY:
+      case STOP_SERVER_VIA_NOTIFY:
+      case STOP_SERVER_VIA_NOTIFY_NOT_MANAGER:
       case STOP_SERVER_WITH_MANAGER:
         g_test_message ("Checking that the confined app still works...");
         tuple = g_dbus_connection_call_sync (f->confined_conn,
@@ -1053,18 +1194,34 @@ test_stop_server (Fixture *f,
         g_assert_cmpstr (name_owner, ==, DBUS_SERVICE_DBUS);
         g_clear_pointer (&tuple, g_variant_unref);
 
-        /* The container instance will not disappear from the bus
+        /* The container server will not disappear from the bus
          * until the confined connection goes away */
-        tuple = g_dbus_proxy_call_sync (f->observer_proxy, "GetInstanceInfo",
-                                        g_variant_new ("(o)", f->instance_path),
+        tuple = g_dbus_proxy_call_sync (f->observer_proxy, "GetServerInfo",
+                                        g_variant_new ("(o)", f->server_path),
                                         G_DBUS_CALL_FLAGS_NONE, -1, NULL,
                                         &f->error);
         g_assert_no_error (f->error);
         g_assert_nonnull (tuple);
+        stringified_result = g_variant_print (tuple, TRUE);
+        g_test_message ("GetServerInfo() -> %s", stringified_result);
+        g_free (stringified_result);
+        g_assert_cmpstr (g_variant_get_type_string (tuple), ==, "(a{sv}sssa{sv})");
+        g_variant_get (tuple, "(@a{sv}&s&s&s@a{sv})",
+                       &creator, &type, &app_id, &instance_id, &asv);
+        g_variant_dict_init (&dict, creator);
+        g_assert_true (g_variant_dict_lookup (&dict, "UnixUserID", "u", &uid));
+        g_assert_cmpuint (uid, ==, _dbus_getuid ());
+        g_variant_dict_clear (&dict);
+        g_assert_cmpstr (type, ==, "com.example.NotFlatpak");
+        g_assert_cmpstr (app_id, ==, "sample-app");
+        g_assert_cmpstr (instance_id, ==, "");
+        g_assert_cmpuint (g_variant_n_children (asv), ==, 0);
+        g_clear_pointer (&asv, g_variant_unref);
+        g_clear_pointer (&creator, g_variant_unref);
         g_clear_pointer (&tuple, g_variant_unref);
 
         /* Now disconnect the last confined connection, which will make the
-         * container instance go away */
+         * container server go away */
         g_test_message ("Closing confined connection...");
         g_dbus_connection_close_sync (f->confined_conn, NULL, &f->error);
         g_assert_no_error (f->error);
@@ -1076,12 +1233,12 @@ test_stop_server (Fixture *f,
 
   /* Whatever happened above, by now it has gone away */
 
-  g_test_message ("Waiting for InstanceRemoved...");
-  while (!g_hash_table_contains (f->containers_removed, f->instance_path))
+  g_test_message ("Waiting for ServerRemoved...");
+  while (!g_hash_table_contains (f->servers_removed, f->server_path))
     g_main_context_iteration (NULL, TRUE);
 
-  tuple = g_dbus_proxy_call_sync (f->observer_proxy, "GetInstanceInfo",
-                                  g_variant_new ("(o)", f->instance_path),
+  tuple = g_dbus_proxy_call_sync (f->observer_proxy, "GetServerInfo",
+                                  g_variant_new ("(o)", f->server_path),
                                   G_DBUS_CALL_FLAGS_NONE, -1, NULL,
                                   &f->error);
   g_assert_nonnull (f->error);
@@ -1099,7 +1256,7 @@ test_stop_server (Fixture *f,
 
 /*
  * Assert that we cannot get the container metadata for a path that
- * isn't a container instance, or a bus name that isn't in a container
+ * isn't a container server, or a bus name that isn't in a container
  * or doesn't exist at all.
  */
 static void
@@ -1119,7 +1276,7 @@ test_invalid_metadata_getters (Fixture *f,
 
   g_test_message ("Inspecting unconfined connection");
   unique_name = g_dbus_connection_get_unique_name (f->unconfined_conn);
-  tuple = g_dbus_proxy_call_sync (f->proxy, "GetConnectionInstance",
+  tuple = g_dbus_proxy_call_sync (f->proxy, "GetConnectionInfo",
                                   g_variant_new ("(s)", unique_name),
                                   G_DBUS_CALL_FLAGS_NONE, -1, NULL, &f->error);
   g_assert_nonnull (f->error);
@@ -1135,7 +1292,7 @@ test_invalid_metadata_getters (Fixture *f,
   g_clear_error (&f->error);
 
   g_test_message ("Inspecting dbus-daemon");
-  tuple = g_dbus_proxy_call_sync (f->proxy, "GetConnectionInstance",
+  tuple = g_dbus_proxy_call_sync (f->proxy, "GetConnectionInfo",
                                   g_variant_new ("(s)", DBUS_SERVICE_DBUS),
                                   G_DBUS_CALL_FLAGS_NONE, -1, NULL, &f->error);
   g_assert_nonnull (f->error);
@@ -1152,7 +1309,7 @@ test_invalid_metadata_getters (Fixture *f,
 
   g_test_message ("Inspecting a non-connection");
   unique_name = g_dbus_connection_get_unique_name (f->unconfined_conn);
-  tuple = g_dbus_proxy_call_sync (f->proxy, "GetConnectionInstance",
+  tuple = g_dbus_proxy_call_sync (f->proxy, "GetConnectionInfo",
                                   g_variant_new ("(s)", "com.example.Nope"),
                                   G_DBUS_CALL_FLAGS_NONE, -1, NULL, &f->error);
   g_assert_nonnull (f->error);
@@ -1168,8 +1325,8 @@ test_invalid_metadata_getters (Fixture *f,
   g_clear_error (&f->error);
 
 
-  g_test_message ("Inspecting container instance info");
-  tuple = g_dbus_proxy_call_sync (f->proxy, "GetInstanceInfo",
+  g_test_message ("Inspecting container server info");
+  tuple = g_dbus_proxy_call_sync (f->proxy, "GetServerInfo",
                                   g_variant_new ("(o)", "/nope"),
                                   G_DBUS_CALL_FLAGS_NONE, -1, NULL, &f->error);
   g_assert_nonnull (f->error);
@@ -1213,9 +1370,10 @@ test_unsupported_parameter (Fixture *f,
                          "ThisArgumentIsntImplemented",
                          "b", FALSE);
 
-  parameters = g_variant_new ("(ssa{sv}@a{sv})",
+  parameters = g_variant_new ("(sssa{sv}@a{sv})",
                               "com.example.NotFlatpak",
                               "sample-app",
+                              "",
                               NULL, /* no metadata */
                               g_variant_dict_end (&named_argument_builder));
   tuple = g_dbus_proxy_call_sync (f->proxy, "AddServer",
@@ -1253,9 +1411,10 @@ test_invalid_type_name (Fixture *f,
                                     NULL, &f->error);
   g_assert_no_error (f->error);
 
-  parameters = g_variant_new ("(ssa{sv}a{sv})",
+  parameters = g_variant_new ("(sssa{sv}a{sv})",
                               "this is not a valid container type name",
                               "sample-app",
+                              "",
                               NULL, /* no metadata */
                               NULL); /* no named arguments */
   tuple = g_dbus_proxy_call_sync (f->proxy, "AddServer",
@@ -1288,12 +1447,13 @@ test_invalid_nesting (Fixture *f,
   if (f->skip)
     return;
 
-  parameters = g_variant_new ("(ssa{sv}a{sv})",
+  parameters = g_variant_new ("(sssa{sv}a{sv})",
                               "com.example.NotFlatpak",
                               "sample-app",
+                              "instance0",
                               NULL, /* no metadata */
                               NULL); /* no named arguments */
-  if (!add_container_server (f, g_steal_pointer (&parameters)))
+  if (!add_container_server (f, g_steal_pointer (&parameters), NULL, NULL))
     return;
 
   g_test_message ("Connecting to %s...", f->socket_dbus_address);
@@ -1312,9 +1472,10 @@ test_invalid_nesting (Fixture *f,
                                         &f->error);
   g_assert_no_error (f->error);
 
-  parameters = g_variant_new ("(ssa{sv}a{sv})",
+  parameters = g_variant_new ("(sssa{sv}a{sv})",
                               "com.example.NotFlatpak",
                               "inner-app",
+                              "instance1",
                               NULL, /* no metadata */
                               NULL); /* no named arguments */
   tuple = g_dbus_proxy_call_sync (nested_proxy, "AddServer",
@@ -1361,9 +1522,10 @@ test_max_containers (Fixture *f,
                                     NULL, &f->error);
   g_assert_no_error (f->error);
 
-  parameters = g_variant_new ("(ssa{sv}a{sv})",
+  parameters = g_variant_new ("(sssa{sv}a{sv})",
                               "com.example.NotFlatpak",
                               "sample-app",
+                              "instance1",
                               NULL, /* no metadata */
                               NULL); /* no named arguments */
   /* We will reuse this variant several times, so don't use floating refs */
@@ -1377,7 +1539,7 @@ test_max_containers (Fixture *f,
                                       NULL, &f->error);
       g_assert_no_error (f->error);
       g_assert_nonnull (tuple);
-      g_variant_get (tuple, "(o^ays)", &placeholders[i], NULL, NULL);
+      g_variant_get (tuple, "(o@a{sv})", &placeholders[i], NULL);
       g_variant_unref (tuple);
       g_test_message ("Placeholder server at %s", placeholders[i]);
     }
@@ -1458,7 +1620,6 @@ test_max_connections_per_container (Fixture *f,
    * limit-containers.conf */
   GSocket *placeholders[G_N_ELEMENTS (socket_paths) * 3] = { NULL };
   GVariant *parameters;
-  GVariant *tuple;
   guint i;
 
   if (f->skip)
@@ -1471,9 +1632,10 @@ test_max_connections_per_container (Fixture *f,
                                     NULL, &f->error);
   g_assert_no_error (f->error);
 
-  parameters = g_variant_new ("(ssa{sv}a{sv})",
+  parameters = g_variant_new ("(sssa{sv}a{sv})",
                               "com.example.NotFlatpak",
                               "sample-app",
+                              "",
                               NULL, /* no metadata */
                               NULL); /* no named arguments */
   /* We will reuse this variant several times, so don't use floating refs */
@@ -1481,13 +1643,25 @@ test_max_connections_per_container (Fixture *f,
 
   for (i = 0; i < G_N_ELEMENTS (socket_paths); i++)
     {
+      GVariant *tuple;
+      GVariant *named_results;
+      gboolean found;
+
       tuple = g_dbus_proxy_call_sync (f->proxy, "AddServer",
                                       parameters, G_DBUS_CALL_FLAGS_NONE, -1,
                                       NULL, &f->error);
       g_assert_no_error (f->error);
       g_assert_nonnull (tuple);
-      g_variant_get (tuple, "(o^ays)", NULL, &socket_paths[i],
-                     &dbus_addresses[i]);
+      g_variant_get (tuple, "(o@a{sv})", NULL, &named_results);
+
+      found = g_variant_lookup (named_results, "Address",
+                                "s", &dbus_addresses[i]);
+      g_assert_true (found);
+      found = g_variant_lookup (named_results, "SocketPath",
+                                "^ay", &socket_paths[i]);
+      g_assert_true (found);
+
+      g_variant_unref (named_results);
       g_variant_unref (tuple);
       socket_addresses[i] = g_unix_socket_address_new (socket_paths[i]);
       g_test_message ("Server #%u at %s", i, socket_paths[i]);
@@ -1621,9 +1795,10 @@ test_max_container_metadata_bytes (Fixture *f,
                                                     1));
 
   /* Floating reference, call_..._sync takes ownership */
-  parameters = g_variant_new ("(ss@a{sv}a{sv})",
+  parameters = g_variant_new ("(sss@a{sv}a{sv})",
                               "com.wasteheadquarters",
                               "Packt Like Sardines in a Crushd Tin Box",
+                              "",
                               g_variant_dict_end (&dict),
                               NULL); /* no named arguments */
 
@@ -1645,7 +1820,7 @@ teardown (Fixture *f,
   g_clear_object (&f->proxy);
 
   fixture_disconnect_observer (f);
-  g_clear_pointer (&f->containers_removed, g_hash_table_unref);
+  g_clear_pointer (&f->servers_removed, g_hash_table_unref);
 
   if (f->libdbus_observer != NULL)
     {
@@ -1680,8 +1855,17 @@ teardown (Fixture *f,
       f->daemon_pid = 0;
     }
 
+  if (f->stop_on_notify_pipe_write_end >= 0)
+    {
+      GError *error = NULL;
+
+      g_close (f->stop_on_notify_pipe_write_end, &error);
+      g_assert_no_error (error);
+      f->stop_on_notify_pipe_write_end = -1;
+    }
+
   dbus_clear_message (&f->latest_shout);
-  g_free (f->instance_path);
+  g_free (f->server_path);
   g_free (f->socket_path);
   g_free (f->socket_dbus_address);
   g_free (f->bus_address);
@@ -1709,6 +1893,16 @@ static const Config stop_server_force =
 {
   "valid-config-files/multi-user.conf",
   STOP_SERVER_FORCE
+};
+static const Config stop_server_via_notify =
+{
+  "valid-config-files/multi-user.conf",
+  STOP_SERVER_VIA_NOTIFY
+};
+static const Config stop_server_not_with_manager =
+{
+  "valid-config-files/multi-user.conf",
+  STOP_SERVER_VIA_NOTIFY_NOT_MANAGER
 };
 static const Config stop_server_with_manager =
 {
@@ -1769,6 +1963,10 @@ main (int argc,
               &stop_server_never_connected, setup, test_stop_server, teardown);
   g_test_add ("/containers/stop-server/force", Fixture,
               &stop_server_force, setup, test_stop_server, teardown);
+  g_test_add ("/containers/stop-server/via-notify", Fixture,
+              &stop_server_via_notify, setup, test_stop_server, teardown);
+  g_test_add ("/containers/stop-server/not-with-manager", Fixture,
+              &stop_server_not_with_manager, setup, test_stop_server, teardown);
   g_test_add ("/containers/stop-server/with-manager", Fixture,
               &stop_server_with_manager, setup, test_stop_server, teardown);
   g_test_add ("/containers/metadata", Fixture, &limit_containers,

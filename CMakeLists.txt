@@ -125,6 +125,7 @@ endif()
 option(DBUS_DISABLE_ASSERT "Disable assertion checking" OFF)
 
 option(DBUS_ENABLE_STATS "enable bus daemon usage statistics" OFF)
+option(DBUS_ENABLE_CONTAINERS "enable restricted servers for app-containers" OFF)
 option(ENABLE_TRADITIONAL_ACTIVATION "Enable traditional activation (without using systemd)" ON)
 
 find_package(PkgConfig)

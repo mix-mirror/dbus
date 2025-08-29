@@ -922,48 +922,6 @@ close_and_invalidate (int *fd)
   return ret;
 }
 
-static dbus_bool_t
-make_pipe (int         p[2],
-           DBusError  *error)
-{
-  int retval;
-
-#ifdef HAVE_PIPE2
-  dbus_bool_t cloexec_done;
-
-  retval = pipe2 (p, O_CLOEXEC);
-  cloexec_done = retval >= 0;
-
-  /* Check if kernel seems to be too old to know pipe2(). We assume
-     that if pipe2 is available, O_CLOEXEC is too.  */
-  if (retval < 0 && errno == ENOSYS)
-#endif
-    {
-      retval = pipe(p);
-    }
-
-  _DBUS_ASSERT_ERROR_IS_CLEAR (error);
-
-  if (retval < 0)
-    {
-      dbus_set_error (error,
-		      DBUS_ERROR_SPAWN_FAILED,
-		      "Failed to create pipe for communicating with child process (%s)",
-		      _dbus_strerror (errno));
-      return FALSE;
-    }
-
-#ifdef HAVE_PIPE2
-  if (!cloexec_done)
-#endif
-    {
-      _dbus_fd_set_close_on_exec (p[0]);
-      _dbus_fd_set_close_on_exec (p[1]);
-    }
-
-  return TRUE;
-}
-
 static void
 do_write (int fd, const void *buf, size_t count)
 {
@@ -1323,7 +1281,7 @@ _dbus_spawn_async_with_babysitter (DBusBabysitter          **sitter_p,
       goto cleanup_and_fail;
     }
 
-  if (!make_pipe (child_err_report_pipe, error))
+  if (!_dbus_unix_make_pipe (child_err_report_pipe, error))
     goto cleanup_and_fail;
 
   if (!_dbus_socketpair (&babysitter_pipe[0], &babysitter_pipe[1], TRUE, error))

@@ -4097,7 +4097,7 @@ dbus_message_contains_unix_fds(DBusMessage *message)
 }
 
 /**
- * Sets the container instance this message was sent from.
+ * Sets the container context this message was sent from.
  *
  * The path must contain only valid characters for an object path
  * as defined in the D-Bus specification.
@@ -4107,8 +4107,8 @@ dbus_message_contains_unix_fds(DBusMessage *message)
  * @returns #FALSE if not enough memory
  */
 dbus_bool_t
-dbus_message_set_container_instance (DBusMessage   *message,
-                                     const char    *object_path)
+dbus_message_set_container_path (DBusMessage   *message,
+                                 const char    *object_path)
 {
   _dbus_return_val_if_fail (message != NULL, FALSE);
   _dbus_return_val_if_fail (!message->locked, FALSE);
@@ -4117,13 +4117,27 @@ dbus_message_set_container_instance (DBusMessage   *message,
                             FALSE);
 
   return set_or_delete_string_field (message,
-                                     DBUS_HEADER_FIELD_CONTAINER_INSTANCE,
+                                     DBUS_HEADER_FIELD_CONTAINER_PATH,
                                      DBUS_TYPE_OBJECT_PATH,
                                      object_path);
 }
 
 /**
- * Gets the container instance this message was sent from, or #NULL
+ * Deprecated alias for dbus_message_set_container_path().
+ *
+ * @param message the message
+ * @param object_path the path or #NULL to unset
+ * @returns #FALSE if not enough memory
+ */
+dbus_bool_t
+dbus_message_set_container_instance (DBusMessage   *message,
+                                     const char    *object_path)
+{
+  return dbus_message_set_container_path (message, object_path);
+}
+
+/**
+ * Gets the container context this message was sent from, or #NULL
  * if none.
  *
  * The returned string becomes invalid if the message is
@@ -4133,7 +4147,7 @@ dbus_message_set_container_instance (DBusMessage   *message,
  * @returns the path (should not be freed) or #NULL
  */
 const char *
-dbus_message_get_container_instance (DBusMessage *message)
+dbus_message_get_container_path (DBusMessage *message)
 {
   const char *v;
 
@@ -4141,10 +4155,22 @@ dbus_message_get_container_instance (DBusMessage *message)
 
   v = NULL; /* in case field doesn't exist */
   _dbus_header_get_field_basic (&message->header,
-                                DBUS_HEADER_FIELD_CONTAINER_INSTANCE,
+                                DBUS_HEADER_FIELD_CONTAINER_PATH,
                                 DBUS_TYPE_OBJECT_PATH,
                                 (void *) &v);
   return v;
+}
+
+/**
+ * Deprecated alias for dbus_message_set_container_instance().
+ *
+ * @param message the message
+ * @returns the path (should not be freed) or #NULL
+ */
+const char *
+dbus_message_get_container_instance (DBusMessage *message)
+{
+  return dbus_message_get_container_path (message);
 }
 
 /** @} */

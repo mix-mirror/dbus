@@ -118,7 +118,7 @@ bus_driver_check_caller_is_not_container (DBusConnection *connection,
                                           DBusMessage    *message,
                                           DBusError      *error)
 {
-  if (bus_containers_connection_is_contained (connection, NULL, NULL, NULL))
+  if (bus_containers_connection_is_contained (connection, NULL, NULL, NULL, NULL))
     {
       const char *method = dbus_message_get_member (message);
 
@@ -1970,9 +1970,7 @@ bus_driver_fill_connection_credentials (DBusCredentials *credentials,
   dbus_pid_t pid = DBUS_PID_UNSET;
   const char *windows_sid = NULL;
   const char *linux_security_label = NULL;
-#ifdef DBUS_ENABLE_CONTAINERS
   const char *path;
-#endif
 #ifdef HAVE_UNIX_FD_PASSING
   int pid_fd = -1; /* owned by credentials */
 #endif
@@ -2033,17 +2031,15 @@ bus_driver_fill_connection_credentials (DBusCredentials *credentials,
         return FALSE;
     }
 
-#ifdef DBUS_ENABLE_CONTAINERS
   /* This has to come from the connection, not the credentials */
   if (peer_conn != NULL &&
-      bus_containers_connection_is_contained (peer_conn, &path, NULL, NULL))
+      bus_containers_connection_is_contained (peer_conn, &path, NULL, NULL, NULL))
     {
       if (!_dbus_asv_add_object_path (asv_iter,
-                                      DBUS_INTERFACE_CONTAINERS1 ".Instance",
+                                      DBUS_INTERFACE_CONTAINERS1 ".Path",
                                       path))
         return FALSE;
     }
-#endif
 
 #ifdef HAVE_UNIX_FD_PASSING
   if (caller_conn != NULL && pid_fd >= 0 &&
@@ -2500,7 +2496,7 @@ typedef enum
    * containers are never privileged. */
   METHOD_FLAG_PRIVILEGED = (1 << 1),
 
-  /* If set, callers must not be associated with a container instance. */
+  /* If set, callers must not be associated with a container. */
   METHOD_FLAG_NO_CONTAINERS = (1 << 2),
 
   METHOD_FLAG_NONE = 0
@@ -2651,16 +2647,16 @@ static const MessageHandler introspectable_message_handlers[] = {
 
 #ifdef DBUS_ENABLE_CONTAINERS
 static const MessageHandler containers_message_handlers[] = {
-  { "AddServer", "ssa{sv}a{sv}", "oays", bus_containers_handle_add_server,
+  { "AddServer", "sssa{sv}a{sv}", "oa{sv}", bus_containers_handle_add_server,
     METHOD_FLAG_NO_CONTAINERS },
-  { "StopInstance", "o", "", bus_containers_handle_stop_instance,
+  { "StopServer", "o", "", bus_containers_handle_stop_server,
     METHOD_FLAG_NO_CONTAINERS },
   { "StopListening", "o", "", bus_containers_handle_stop_listening,
     METHOD_FLAG_NO_CONTAINERS },
-  { "GetConnectionInstance", "s", "oa{sv}ssa{sv}",
-    bus_containers_handle_get_connection_instance,
+  { "GetConnectionInfo", "s", "oa{sv}sssa{sv}",
+    bus_containers_handle_get_connection_info,
     METHOD_FLAG_NONE },
-  { "GetInstanceInfo", "o", "a{sv}ssa{sv}", bus_containers_handle_get_instance_info,
+  { "GetServerInfo", "o", "a{sv}sssa{sv}", bus_containers_handle_get_server_info,
     METHOD_FLAG_NONE },
   { "RequestHeader", "", "", bus_containers_handle_request_header,
     METHOD_FLAG_NONE },
@@ -2780,7 +2776,7 @@ static InterfaceHandler interface_handlers[] = {
 #endif
 #ifdef DBUS_ENABLE_CONTAINERS
   { DBUS_INTERFACE_CONTAINERS1, containers_message_handlers,
-    "    <signal name=\"InstanceRemoved\">\n"
+    "    <signal name=\"ServerRemoved\">\n"
     "      <arg type=\"o\" name=\"path\"/>\n"
     "    </signal>\n",
     INTERFACE_FLAG_NONE, containers_property_handlers },

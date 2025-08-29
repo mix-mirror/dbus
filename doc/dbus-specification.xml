@@ -7044,6 +7044,19 @@
                 </entry>
               </row>
 
+              <row>
+                <entry>org.freedesktop.DBus.Containers1.Path</entry>
+                <entry>OBJECT_PATH</entry>
+                <entry>
+                  The object path of the container-specific server through
+                  which this connection is connected, as returned by the
+                  <link linkend="bus-messages-containers1-add-server"
+                    >AddServer</link> method. Omitted from the
+                  dictionary if this connection is not via a container's
+                  server.
+                </entry>
+              </row>
+
             </tbody>
           </tgroup>
         </informaltable>
@@ -7452,6 +7465,764 @@
       </para>
     </sect2>
 
+    <sect2 id="message-bus-containers-interface">
+      <title>Containers Interface v1: <literal>org.freedesktop.DBus.Containers1</literal></title>
+      <para>
+        The special message bus name <literal>org.freedesktop.DBus</literal>
+        may optionally implement the
+        <literal>org.freedesktop.DBus.Containers1</literal> interface on
+        the object path <literal>/org/freedesktop/DBus</literal>.
+      </para>
+
+      <para>
+        This interface allows container managers and similar sandboxing
+        mechanisms to ask the message bus to create a special socket
+        for each sandboxed application,
+        which uniquely identifies the application to other message bus
+        clients without introducing race conditions.
+        For this mechanism to be useful, the sandboxed application must be
+        prevented from connecting to the message bus's usual socket.
+        This interface is a D-Bus equivalent of the
+        <ulink url="https://gitlab.freedesktop.org/wayland/wayland-protocols/-/tree/main/staging/security-context">Wayland security-context extension</ulink>.
+      </para>
+
+      <para>
+        As currently implemented, this interface does not apply any
+        special filtering to the D-Bus messages sent and received by a
+        sandboxed application.
+        To limit what a sandboxed application can do on D-Bus, it is
+        likely to be necessary to impose restrictions,
+        perhaps by using a Linux security module such as AppArmor or a
+        filtering proxy such as
+        <ulink url="https://github.com/flatpak/xdg-dbus-proxy/">xdg-dbus-proxy</ulink>.
+        A future version of this specification might add a mechanism for
+        the creator of a confined socket to specify filtering rules.
+      </para>
+
+      <sect3 id="bus-messages-containers1-add-server">
+        <title>Method: <literal>org.freedesktop.DBus.Containers1.AddServer</literal></title>
+        <para>
+          As a method:
+          <programlisting>
+            AddServer (in STRING container_type,
+                       in STRING app_id,
+                       in STRING instance_id,
+                       in DICT&lt;STRING,VARIANT&gt; metadata,
+                       in DICT&lt;STRING,VARIANT&gt; named_arguments,
+                       out OBJECT_PATH server_path,
+                       out DICT&lt;STRING,VARIANT&gt; results)
+          </programlisting>
+          Message arguments:
+          <informaltable>
+            <tgroup cols="3">
+              <thead>
+                <row>
+                  <entry>Argument</entry>
+                  <entry>Type</entry>
+                  <entry>Description</entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry>0</entry>
+                  <entry>STRING</entry>
+                  <entry>
+                    Reversed domain name identifying a container manager
+                    or container technology, such as
+                    <literal>org.flatpak</literal> or
+                    <literal>io.snapcraft</literal>. It must follow the
+                    same syntactic rules as a
+                    <link linkend="message-protocol-names-interface">D-Bus
+                      interface name</link>.
+                    Container managers should use the same identifier here
+                    that they use for the
+                    <literal>set_sandbox_engine</literal> request in the
+                    <ulink url="https://gitlab.freedesktop.org/wayland/wayland-protocols/-/tree/main/staging/security-context">Wayland security-context extension</ulink>.
+                  </entry>
+                </row>
+                <row>
+                  <entry>1</entry>
+                  <entry>STRING</entry>
+                  <entry>
+                    Some unique identifier for an application or
+                    container, whose meaning is defined by the
+                    maintainers of the container type. If the container
+                    type does not have a concept of identifying or
+                    naming its applications or containers by a string,
+                    using the empty string here is suggested.
+                    Container managers should use the same identifier here
+                    that they use for the
+                    <literal>set_app_id</literal> request in the
+                    <ulink url="https://gitlab.freedesktop.org/wayland/wayland-protocols/-/tree/main/staging/security-context">Wayland security-context extension</ulink>.
+                  </entry>
+                </row>
+                <row>
+                  <entry>2</entry>
+                  <entry>STRING</entry>
+                  <entry>
+                    Some unique identifier for a particular instance of an
+                    application or container, whose meaning is defined by the
+                    maintainers of the container type. If the container
+                    type does not have a concept of identifying or
+                    naming instances by a string,
+                    using the empty string here is suggested.
+                    Container managers should use the same identifier here
+                    that they use for the
+                    <literal>set_instance_id</literal> request in the
+                    <ulink url="https://gitlab.freedesktop.org/wayland/wayland-protocols/-/tree/main/staging/security-context">Wayland security-context extension</ulink>.
+                  </entry>
+                </row>
+                <row>
+                  <entry>3</entry>
+                  <entry>DICT&lt;STRING,VARIANT&gt;</entry>
+                  <entry>
+                    Metadata describing the application or container.
+                    All keys and values are reserved for future standardization,
+                    either in this specification or in a separate
+                    freedesktop.org specification referenced by this one.
+                  </entry>
+                </row>
+                <row>
+                  <entry>4</entry>
+                  <entry>DICT&lt;STRING,VARIANT&gt;</entry>
+                  <entry>
+                    Additional arguments that extend this method.
+                    The only named arguments that are allowed are the ones
+                    listed in the
+                    <literal>org.freedesktop.DBus.Containers1.SupportedArguments</literal>
+                    property. All other named arguments are an error.
+                  </entry>
+                </row>
+                <row>
+                  <entry>5</entry>
+                  <entry>OBJECT_PATH</entry>
+                  <entry>
+                    An opaque object path identifying the new container
+                    context.
+                  </entry>
+                </row>
+                <row>
+                  <entry>6</entry>
+                  <entry>DICT&lt;STRING,VARIANT&gt;</entry>
+                  <entry>
+                    Details of the container-specific server that was
+                    created (see below).
+                  </entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </informaltable>
+        </para>
+
+        <para>
+          Set up a new server socket for use in an application container.
+          Clients can connect to that socket, and the result will be as
+          though they had connected to the message bus, with a few differences.
+          The intention is that a container manager will call this method
+          to get a new server socket, bind-mount the server socket
+          into a location that is accessible by the confined (sandboxed)
+          application, and ensure that the normal message bus socket is
+          <emphasis>not</emphasis> accessible by the confined application.
+        </para>
+
+        <para>
+          Each call to this method creates a new
+          <firstterm>container server</firstterm>, identified by an object
+          path. Even if the specified container type, app ID and instance ID
+          are the same as for a pre-existing container server, each call
+          creates a new server with a new unique object path, because
+          the new container server might represent a different
+          version of the confined application with different
+          characteristics and restrictions (although in practice it is
+          expected that container managers are most likely to create one
+          server per instance ID). The message bus may provide
+          an object at the given object path, but is not required to
+          do so.
+        </para>
+
+        <para>
+          Metadata from the first three arguments is stored by the message
+          bus, but not interpreted; software that interacts with the
+          container manager can use this metadata.
+          The method call may fail with the error
+          <literal>org.freedesktop.DBus.Error.LimitsExceeded</literal>
+          if the caller provides more metadata than the message bus
+          is willing to store.
+        </para>
+
+        <para>
+          The last argument (the <firstterm>named arguments</firstterm>)
+          can be used to modify
+          the behaviour of this method call; all keys in this dictionary not
+          containing <literal>.</literal> are reserved by this specification
+          for this purpose. It can also contain implementation-specific
+          arguments for a particular message bus implementation, which
+          should start with a reversed domain name in the same way as
+          interface names. For example, GLib's gdbus-daemon might use
+          <literal>org.gtk.GDBus.SomeArgument</literal> if it used this
+          extension point.
+        </para>
+
+        <para>
+          The only named arguments that are allowed are the ones
+          listed in the
+          <literal>org.freedesktop.DBus.Containers1.SupportedArguments</literal>
+          property. All other named arguments are an error.
+          The possible keys currently defined for the named arguments are:
+          <informaltable>
+            <tgroup cols="4">
+              <thead>
+                <row>
+                  <entry>Key</entry>
+                  <entry>Value type</entry>
+                  <entry>Default value</entry>
+                  <entry>Meaning</entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry><literal>StopOnDisconnect</literal></entry>
+                  <entry>BOOLEAN</entry>
+                  <entry>true</entry>
+                  <entry>
+                    If true or omitted, the server socket will cease to
+                    listen for new connections (in the same way as if
+                    <literal>StopListening</literal> had been called
+                    successfully) when the caller of this method
+                    disconnects from the bus. Any confined connections
+                    that are already active are unaffected.
+                    If false, the server socket continues to listen after
+                    the caller disconnects, until there is some other reason
+                    for it to stop.
+                  </entry>
+                </row>
+                <row>
+                  <entry><literal>StopOnNotify</literal></entry>
+                  <entry>UNIX_FD</entry>
+                  <entry>(none)</entry>
+                  <entry>
+                    A file descriptor which will become readable (either
+                    data available or end-of-file) when it is time to stop
+                    listening for new connections. In practice, this is
+                    expected to be the read end of a Unix pipe, for which
+                    the corresponding write end will be closed (either
+                    explicitly or when its owning process exits) when the
+                    container manager detects that the application has
+                    stopped running. This will often be combined with
+                    <literal>{ "StopOnDisconnect": false }</literal>.
+                  </entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </informaltable>
+         </para>
+
+        <para>
+          Keys in the returned result dictionary not containing "." are defined
+          by this specification. Bus daemon implementors wishing to emit
+          information not mentioned in this document should use keys
+          containing "." and starting with a reversed domain name.
+          Additional keys may be added to the result at any time, and
+          callers must accept and ignore unknown keys in this dictionary.
+        </para>
+
+        <para>
+          The defined keys for the result dictionary are:
+          <informaltable>
+            <tgroup cols="3">
+              <thead>
+                <row>
+                  <entry>Key</entry>
+                  <entry>Value type</entry>
+                  <entry>Value</entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry><literal>Address</literal></entry>
+                  <entry>STRING</entry>
+                  <entry>
+                    A connectable D-Bus address, for example
+                    <literal>unix:path=/run/user/1000/dbus-12345vwxyz</literal>.
+                  </entry>
+                </row>
+                <row>
+                  <entry><literal>SocketPath</literal></entry>
+                  <entry>ARRAY of BYTE</entry>
+                  <entry>
+                    The absolute filesystem path of the resulting
+                    <literal>AF_UNIX</literal> socket, followed by a single
+                    zero (nul) byte, for example
+                    <literal>/run/user/1000/dbus-12345vwxyz\x00</literal>
+                    where \x00 represents the terminating zero byte.
+                  </entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </informaltable>
+         </para>
+
+        <para>
+          In the most basic form of a call to this method, the new server
+          socket is an <literal>AF_UNIX</literal> socket at a path chosen
+          by the message bus and returned from the method.
+          When operating in this way, each successful call will return a
+          result dictionary containing both <literal>Address</literal> and
+          <literal>SocketPath</literal>.
+          Callers may use whichever of those members is more convenient.
+          If a future version of this specification adds a mechanism to
+          request that the server listens in some way that makes these two
+          members inapplicable, for example receiving a socket from the
+          caller in the named arguments dictionary via file descriptor passing
+          and arranging for it to listen for connections, then those members
+          will be omitted from the result dictionary.
+        </para>
+
+        <para>
+          Connections to the new server socket are said to be
+          <firstterm>confined</firstterm>. The message bus may prevent
+          confined connections from calling certain security-sensitive methods,
+          and may apply lower limits to these connections. However, container
+          managers and services must not rely on confined connections having
+          any particular filtering applied to them by the message bus.
+        </para>
+
+        <para>
+          The container server object path remains valid for as
+          long as one or more confined connection via the same server
+          socket remain open, or there is a way for the server socket
+          to produce new connections in future (in other words,
+          either it is preparing to listen for new connections, or
+          it is currently listening for new connections). When the
+          container server has ceased to listen for new connections
+          and no longer has any confined connections, the object path
+          becomes invalid, and API calls that specify it will fail with
+          the <literal>org.freedesktop.DBus.Error.NotContainer</literal>
+          error.
+        </para>
+      </sect3>
+
+      <sect3 id="bus-messages-containers1-stop-server">
+        <title>Method: <literal>org.freedesktop.DBus.Containers1.StopServer</literal></title>
+        <para>
+          As a method:
+          <programlisting>
+            StopServer (in OBJECT_PATH server_path)
+          </programlisting>
+          Message arguments:
+          <informaltable>
+            <tgroup cols="3">
+              <thead>
+                <row>
+                  <entry>Argument</entry>
+                  <entry>Type</entry>
+                  <entry>Description</entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry>0</entry>
+                  <entry>OBJECT_PATH</entry>
+                  <entry>
+                    The opaque object path that was returned from the
+                    <literal>AddServer</literal> method, identifying a
+                    per-container server.
+                  </entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </informaltable>
+        </para>
+
+        <para>
+          Terminate the container server. The server will stop
+          listening for new connections, and any existing connections to
+          that server will be disconnected. When all connections have
+          been disconnected, the context will cease to exist.
+        </para>
+        <para>
+          If the given object path does not represent a valid container
+          context (see
+          <xref linkend="bus-messages-containers1-add-server"/>), the
+          <literal>org.freedesktop.DBus.Error.NotContainer</literal>
+          error is returned. In particular, if this method is called
+          twice, the second call will fail in this way.
+        </para>
+        <para>
+          If the given container server exists but the caller of this
+          method is not allowed to stop it (for example because the
+          caller is in a container server or because its user ID does
+          not match the user ID of the creator of the container
+          context),
+          the <literal>org.freedesktop.DBus.Error.AccessDenied</literal>
+          error is returned and nothing is stopped.
+        </para>
+      </sect3>
+
+      <sect3 id="bus-messages-containers1-stop-listening">
+        <title>Method: <literal>org.freedesktop.DBus.Containers1.StopListening</literal></title>
+        <para>
+          As a method:
+          <programlisting>
+            StopListening (in OBJECT_PATH server_path)
+          </programlisting>
+          Message arguments:
+          <informaltable>
+            <tgroup cols="3">
+              <thead>
+                <row>
+                  <entry>Argument</entry>
+                  <entry>Type</entry>
+                  <entry>Description</entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry>0</entry>
+                  <entry>OBJECT_PATH</entry>
+                  <entry>
+                    The opaque object path that was returned from the
+                    <literal>AddServer</literal> method, identifying a
+                    container server.
+                  </entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </informaltable>
+        </para>
+
+        <para>
+          Stop listening for new connections to the given per-container
+          server, but do not disconnect any existing connections.
+        </para>
+        <para>
+          If this method is called more than once, while the container
+          context still exists because connections to it are still
+          open, the second and subsequent calls will be successful but
+          will have no practical effect.
+        </para>
+        <para>
+          If the given object path does not represent a valid container
+          context (see
+          <xref linkend="bus-messages-containers1-add-server"/>), the
+          <literal>org.freedesktop.DBus.Error.NotContainer</literal>
+          error is returned. In particular, this will happen if the
+          per-container server already stopped listening, and all
+          connections to it (if any) were already closed.
+        </para>
+        <para>
+          If the given per-container server exists but the caller of this
+          method is not allowed to stop it (for example because the
+          caller is itself in a container, or because its user ID does
+          not match the user ID of the creator of the container server),
+          the <literal>org.freedesktop.DBus.Error.AccessDenied</literal>
+          error is returned and nothing is stopped.
+        </para>
+      </sect3>
+
+      <sect3 id="bus-messages-containers1-get-connection-info">
+        <title>Method: <literal>org.freedesktop.DBus.Containers1.GetConnectionInfo</literal></title>
+        <para>
+          As a method:
+          <programlisting>
+            GetConnectionInfo (in STRING bus_name,
+                               out OBJECT_PATH server_path,
+                               out DICT&lt;STRING,VARIANT&gt; creator,
+                               out STRING container_type,
+                               out STRING app_id,
+                               out STRING instance_id,
+                               out DICT&lt;STRING,VARIANT&gt; metadata)
+          </programlisting>
+          Message arguments:
+          <informaltable>
+            <tgroup cols="3">
+              <thead>
+                <row>
+                  <entry>Argument</entry>
+                  <entry>Type</entry>
+                  <entry>Description</entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry>0</entry>
+                  <entry>STRING</entry>
+                  <entry>
+                    Unique or well-known bus name of the connection to
+                    query, such as <literal>:12.34</literal> or
+                    <literal>com.example.tea</literal>.
+                  </entry>
+                </row>
+                <row>
+                  <entry>1</entry>
+                  <entry>OBJECT_PATH</entry>
+                  <entry>
+                    The opaque object path that was returned from the
+                    <link linkend="bus-messages-containers1-add-server"
+                      >AddServer</link> method, identifying a
+                    per-container server.
+                    This output parameter is produced by the message bus.
+                  </entry>
+                </row>
+                <row>
+                  <entry>2</entry>
+                  <entry>DICT&lt;STRING,VARIANT&gt;</entry>
+                  <entry>
+                    Credentials of the connection that created this
+                    per-container server.
+                    The keys and values are the same as those that are
+                    documented for
+                    <link linkend="bus-messages-get-connection-credentials"
+                      >GetConnectionCredentials</link>.
+                    This output parameter is produced by the message bus
+                    and is appropriate to use in trust decisions.
+                  </entry>
+                </row>
+                <row>
+                  <entry>3</entry>
+                  <entry>STRING</entry>
+                  <entry>
+                    Reversed domain name identifying a container
+                    manager or container technology, as passed to the
+                    <literal>AddServer</literal> method, such as
+                    <literal>org.flatpak</literal> or
+                    <literal>io.snapcraft</literal>.
+                    This output parameter is controlled by the creator
+                    of the per-container server.
+                  </entry>
+                </row>
+                <row>
+                  <entry>4</entry>
+                  <entry>STRING</entry>
+                  <entry>
+                    A unique identifier for an application or container,
+                    whose meaning is defined by the maintainers of the
+                    container type.
+                    For example, Flatpak would use a freedesktop.org app ID
+                    such as <literal>org.mozilla.firefox</literal>, but
+                    Snap might use a Snap app ID such as
+                    <literal>firefox</literal>.
+                    This output parameter is controlled by the creator
+                    of the per-container server.
+                    Depending on the container type, it might be possible
+                    to look up further metadata for the application in a
+                    container-type-specific way.
+                  </entry>
+                </row>
+                <row>
+                  <entry>5</entry>
+                  <entry>STRING</entry>
+                  <entry>
+                    A unique identifier for a particular instance of an
+                    application or container, whose meaning is defined by
+                    the maintainers of the container type.
+                    For example, Flatpak would use the same numeric
+                    instance ID that is shown by <literal>flatpak ps</literal>.
+                    This output parameter is controlled by the creator
+                    of the per-container server.
+                    Depending on the container type, it might be possible
+                    to look up further metadata for the instance in a
+                    container-type-specific way, for example by reading
+                    <filename>$XDG_RUNTIME_DIR/.flatpak/$INSTANCE/info</filename>
+                    for a Flatpak app.
+                  </entry>
+                </row>
+                <row>
+                  <entry>6</entry>
+                  <entry>DICT&lt;STRING,VARIANT&gt;</entry>
+                  <entry>
+                    Metadata describing the application or container.
+                    All keys and values are reserved for future standardization,
+                    either in this specification or in a separate
+                    freedesktop.org specification referenced by this one.
+                    This output parameter is controlled by the creator
+                    of the per-container server.
+                  </entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </informaltable>
+        </para>
+
+        <para>
+          If the given unique or well-known bus name is a connection to a
+          container server, return information about that per-container server.
+          If the bus name exists but is not confined (in other words, if it
+          is a direct connection to the main message bus socket), the
+          <literal>org.freedesktop.DBus.Error.NotContainer</literal> error
+          is returned instead. If the given bus name has no owner at all, the
+          <literal>org.freedesktop.DBus.Error.NameHasNoOwner</literal> error
+          is returned instead.
+        </para>
+        <para>
+          Several of the output parameters are controlled by the creator of
+          the per-container server.
+          On a bus that accepts connections from multiple clients at
+          different privilege levels, it is not appropriate to trust those
+          output parameters or use them in trust decisions unless the
+          process identified by the <literal>creator</literal> parameter
+          is trusted.
+        </para>
+      </sect3>
+
+      <sect3 id="bus-messages-containers1-get-server-info">
+        <title>Method: <literal>org.freedesktop.DBus.Containers1.GetServerInfo</literal></title>
+        <para>
+          As a method:
+          <programlisting>
+            GetServerInfo (in OBJECT_PATH server_path,
+                           out DICT&lt;STRING,VARIANT&gt; creator,
+                           out STRING container_type,
+                           out STRING app_id,
+                           out STRING instance_id,
+                           out DICT&lt;STRING,VARIANT&gt; metadata)
+          </programlisting>
+          Message arguments:
+          <informaltable>
+            <tgroup cols="3">
+              <thead>
+                <row>
+                  <entry>Argument</entry>
+                  <entry>Type</entry>
+                  <entry>Description</entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry>0</entry>
+                  <entry>OBJECT_PATH</entry>
+                  <entry>
+                    The opaque object path that was returned from the
+                    <literal>AddServer</literal> method, identifying a
+                    per-container server.
+                  </entry>
+                </row>
+                <row>
+                  <entry>1</entry>
+                  <entry>DICT&lt;STRING,VARIANT&gt;</entry>
+                  <entry>
+                    Credentials of the connection that created this
+                    per-container server.
+                    The keys and values are the same as those that are
+                    documented for
+                    <link linkend="bus-messages-get-connection-credentials"
+                      >GetConnectionCredentials</link>.
+                    This output parameter is produced by the message bus
+                    and is appropriate to use in trust decisions.
+                  </entry>
+                </row>
+                <row>
+                  <entry>2</entry>
+                  <entry>STRING</entry>
+                  <entry>
+                    Reversed domain name identifying a container
+                    manager or container technology,
+                    the same as the corresponding parameter in
+                    <link linkend="bus-messages-containers1-get-connection-info"
+                      >GetConnectionInfo</link>.
+                    This output parameter is controlled by the creator
+                    of the per-container server.
+                  </entry>
+                </row>
+                <row>
+                  <entry>3</entry>
+                  <entry>STRING</entry>
+                  <entry>
+                    Some unique identifier for an application or container,
+                    the same as the corresponding parameter in
+                    <link linkend="bus-messages-containers1-get-connection-info"
+                      >GetConnectionInfo</link>.
+                    This output parameter is controlled by the creator
+                    of the per-container server.
+                  </entry>
+                </row>
+                <row>
+                  <entry>4</entry>
+                  <entry>STRING</entry>
+                  <entry>
+                    Some unique identifier for a particular instance of an
+                    application or container,
+                    the same as the corresponding parameter in
+                    <link linkend="bus-messages-containers1-get-connection-info"
+                      >GetConnectionInfo</link>.
+                    This output parameter is controlled by the creator
+                    of the per-container server.
+                  </entry>
+                </row>
+                <row>
+                  <entry>5</entry>
+                  <entry>DICT&lt;STRING,VARIANT&gt;</entry>
+                  <entry>
+                    Metadata describing the application or container,
+                    the same as the corresponding parameter in
+                    <link linkend="bus-messages-containers1-get-connection-info"
+                      >GetConnectionInfo</link>.
+                    This output parameter is controlled by the creator
+                    of the per-container server.
+                  </entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </informaltable>
+        </para>
+
+        <para>
+          If the given object path represents a valid per-container server
+          (see <xref linkend="bus-messages-containers1-add-server"/>),
+          return information about it. Otherwise, the
+          <literal>org.freedesktop.DBus.Error.NotContainer</literal> error
+          is returned.
+        </para>
+        <para>
+          Several of the output parameters are controlled by the creator of
+          the per-container server.
+          See <xref linkend="bus-messages-containers1-get-connection-info"/>
+          for more details.
+        </para>
+      </sect3>
+
+      <sect3 id="bus-messages-containers1-server-removed">
+        <title>Signal: <literal>org.freedesktop.DBus.Containers1.ServerRemoved</literal></title>
+        <para>
+          As a signal emitted by the message bus:
+          <programlisting>
+            ServerRemoved (OBJECT_PATH server_path)
+          </programlisting>
+          Message arguments:
+          <informaltable>
+            <tgroup cols="3">
+              <thead>
+                <row>
+                  <entry>Argument</entry>
+                  <entry>Type</entry>
+                  <entry>Description</entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry>0</entry>
+                  <entry>OBJECT_PATH</entry>
+                  <entry>
+                    The opaque object path that was returned from the
+                    <literal>AddServer</literal> method, identifying a
+                    per-container server.
+                  </entry>
+                </row>
+              </tbody>
+            </tgroup>
+          </informaltable>
+        </para>
+
+        <para>
+          Emitted when a per-container server ceases to exist. A per-container
+          server continues to exist as long as it is listening for
+          new connections, or as long as connections to the server
+          are open, whichever is longer.
+        </para>
+      </sect3>
+
+    </sect2>
+
     <sect2 id="message-bus-monitoring-interface">
       <title>Monitoring Interface: <literal>org.freedesktop.DBus.Monitoring</literal></title>
       <para>
@@ -7502,7 +8273,12 @@
           monitor connections<footnote>
             <para>
               In the reference implementation,
-              the default configuration is that each user (identified by
+              the default configuration is that connections to a
+              container server managed by
+              <link linkend="message-bus-containers-interface">the
+                Containers1 interface</link>
+              are not privileged and cannot become a monitor;
+              otherwise, each user (identified by
               numeric user ID) may monitor their own session bus,
               and the root user (user ID zero) may monitor the
               system bus.

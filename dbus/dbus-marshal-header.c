@@ -86,7 +86,7 @@ _dbus_header_field_types[DBUS_HEADER_FIELD_LAST+1] = {
   { DBUS_HEADER_FIELD_SENDER, DBUS_TYPE_STRING },
   { DBUS_HEADER_FIELD_SIGNATURE, DBUS_TYPE_SIGNATURE },
   { DBUS_HEADER_FIELD_UNIX_FDS, DBUS_TYPE_UINT32 },
-  { DBUS_HEADER_FIELD_CONTAINER_INSTANCE, DBUS_TYPE_OBJECT_PATH }
+  { DBUS_HEADER_FIELD_CONTAINER_PATH, DBUS_TYPE_OBJECT_PATH }
 };
 
 /** Macro to look up the correct type for a field */
@@ -922,7 +922,7 @@ load_and_validate_field (DBusHeader     *header,
       string_validation_func = NULL;
       break;
 
-    case DBUS_HEADER_FIELD_CONTAINER_INSTANCE:
+    case DBUS_HEADER_FIELD_CONTAINER_PATH:
       /* OBJECT_PATH was validated generically due to its type */
       string_validation_func = NULL;
       break;

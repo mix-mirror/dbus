@@ -303,9 +303,15 @@ extern "C" {
  */
 #define DBUS_HEADER_FIELD_UNIX_FDS       9
 /**
- * Header field code for the container instance that sent this message.
+ * Header field code for the container context that sent this message.
  */
+#define DBUS_HEADER_FIELD_CONTAINER_PATH 10
+/**
+ * Deprecated alias for #DBUS_HEADER_FIELD_CONTAINER_PATH
+ */
+#ifndef DBUS_DISABLE_DEPRECATED
 #define DBUS_HEADER_FIELD_CONTAINER_INSTANCE 10
+#endif
 
 
 /**
@@ -314,7 +320,7 @@ extern "C" {
  * that unknown codes must be ignored, so check for that before
  * indexing the array.
  */
-#define DBUS_HEADER_FIELD_LAST DBUS_HEADER_FIELD_CONTAINER_INSTANCE
+#define DBUS_HEADER_FIELD_LAST DBUS_HEADER_FIELD_CONTAINER_PATH
 
 /** Header format is defined as a signature:
  *   byte                            byte order
