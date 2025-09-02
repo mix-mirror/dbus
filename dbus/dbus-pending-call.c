@@ -50,15 +50,6 @@
  */
 
 /**
- * shorter and more visible way to write _dbus_connection_lock()
- */
-#define CONNECTION_LOCK(connection)   _dbus_connection_lock(connection)
-/**
- * shorter and more visible way to write _dbus_connection_unlock()
- */
-#define CONNECTION_UNLOCK(connection) _dbus_connection_unlock(connection)
-
-/**
  * Implementation details of #DBusPendingCall - all fields are private.
  */
 struct DBusPendingCall
@@ -353,7 +344,7 @@ _dbus_pending_call_get_connection_and_lock (DBusPendingCall *pending)
 {
   _dbus_assert (pending != NULL);
  
-  CONNECTION_LOCK (pending->connection);
+  _dbus_connection_lock (pending->connection);
   return pending->connection;
 }
 
@@ -492,7 +483,7 @@ _dbus_pending_call_unref_and_unlock (DBusPendingCall *pending)
   _dbus_pending_call_trace_ref (pending, old_refcount,
       old_refcount - 1, "unref_and_unlock");
 
-  CONNECTION_UNLOCK (pending->connection);
+  _dbus_connection_unlock (pending->connection);
 
   if (old_refcount == 1)
     _dbus_pending_call_last_unref (pending);
@@ -543,7 +534,7 @@ _dbus_pending_call_set_data_unlocked (DBusPendingCall  *pending,
                                      &old_free_func, &old_data);
 
   /* Drop locks to call out to app code */
-  CONNECTION_UNLOCK (pending->connection);
+  _dbus_connection_unlock (pending->connection);
   
   if (retval)
     {
@@ -551,7 +542,7 @@ _dbus_pending_call_set_data_unlocked (DBusPendingCall  *pending,
         (* old_free_func) (old_data);
     }
 
-  CONNECTION_LOCK (pending->connection);
+  _dbus_connection_lock (pending->connection);
   
   return retval;
 }
@@ -657,7 +648,7 @@ dbus_pending_call_set_notify (DBusPendingCall              *pending,
 
   _dbus_return_val_if_fail (pending != NULL, FALSE);
 
-  CONNECTION_LOCK (pending->connection);
+  _dbus_connection_lock (pending->connection);
   
   /* could invoke application code! */
   if (!_dbus_pending_call_set_data_unlocked (pending, notify_user_data_slot,
@@ -668,7 +659,7 @@ dbus_pending_call_set_notify (DBusPendingCall              *pending,
   ret = TRUE;
 
 out:
-  CONNECTION_UNLOCK (pending->connection);
+  _dbus_connection_unlock (pending->connection);
   
   return ret;
 }
@@ -711,9 +702,9 @@ dbus_pending_call_get_completed (DBusPendingCall *pending)
   
   _dbus_return_val_if_fail (pending != NULL, FALSE);
 
-  CONNECTION_LOCK (pending->connection);
+  _dbus_connection_lock (pending->connection);
   completed = pending->completed;
-  CONNECTION_UNLOCK (pending->connection);
+  _dbus_connection_unlock (pending->connection);
 
   return completed;
 }
@@ -736,12 +727,12 @@ dbus_pending_call_steal_reply (DBusPendingCall *pending)
   _dbus_return_val_if_fail (pending->completed, NULL);
   _dbus_return_val_if_fail (pending->reply != NULL, NULL);
 
-  CONNECTION_LOCK (pending->connection);
+  _dbus_connection_lock (pending->connection);
   
   message = pending->reply;
   pending->reply = NULL;
 
-  CONNECTION_UNLOCK (pending->connection);
+  _dbus_connection_unlock (pending->connection);
 
   _dbus_message_trace_ref (message, -1, -1, "dbus_pending_call_steal_reply");
   return message;
@@ -838,9 +829,9 @@ dbus_pending_call_set_data (DBusPendingCall  *pending,
   _dbus_return_val_if_fail (slot >= 0, FALSE);
 
   
-  CONNECTION_LOCK (pending->connection);
+  _dbus_connection_lock (pending->connection);
   retval = _dbus_pending_call_set_data_unlocked (pending, slot, data, free_data_func);
-  CONNECTION_UNLOCK (pending->connection);
+  _dbus_connection_unlock (pending->connection);
   return retval;
 }
 
@@ -860,11 +851,11 @@ dbus_pending_call_get_data (DBusPendingCall   *pending,
 
   _dbus_return_val_if_fail (pending != NULL, NULL);
 
-  CONNECTION_LOCK (pending->connection);
+  _dbus_connection_lock (pending->connection);
   res = _dbus_data_slot_list_get (&slot_allocator,
                                   &pending->slot_list,
                                   slot);
-  CONNECTION_UNLOCK (pending->connection);
+  _dbus_connection_unlock (pending->connection);
 
   return res;
 }

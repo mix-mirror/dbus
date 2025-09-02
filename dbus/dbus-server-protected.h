@@ -170,13 +170,13 @@ void _dbus_server_trace_ref (DBusServer *server,
 #define TRACE_LOCKS 0
 
 #define SERVER_LOCK(server)   do {                                              \
-    if (TRACE_LOCKS) { _dbus_verbose ("LOCK\n"); }   \
+    if (TRACE_LOCKS) { _dbus_verbose ("LOCK server:%p mutex:%p\n", server, (server)->mutex); }   \
     _dbus_rmutex_lock ((server)->mutex);                                        \
     TOOK_LOCK_CHECK (server);                                                   \
   } while (0)
 
 #define SERVER_UNLOCK(server) do {                                                      \
-    if (TRACE_LOCKS) { _dbus_verbose ("UNLOCK\n");  }        \
+    if (TRACE_LOCKS) { _dbus_verbose ("UNLOCK server:%p mutex:%p\n", server, (server)->mutex);  }        \
     RELEASING_LOCK_CHECK (server);                                                      \
     _dbus_rmutex_unlock ((server)->mutex);                                              \
   } while (0)

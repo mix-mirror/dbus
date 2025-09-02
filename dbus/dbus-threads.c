@@ -31,6 +31,12 @@
 /* Protected by _dbus_threads_lock_platform_specific() */
 static int thread_init_generation = 0;
 
+#ifdef DBUS_DISABLE_CHECKS
+#undef TRACE_LOCKS
+#else
+#define TRACE_LOCKS
+#endif
+
 /**
  * @defgroup DBusThreadsInternals Thread functions
  * @ingroup  DBusInternals
@@ -349,6 +355,9 @@ _dbus_lock (DBusGlobalLock lock)
       !dbus_threads_init_default ())
     return FALSE;
 
+#ifdef TRACE_LOCKS
+  _dbus_verbose ("LOCK DBusGlobalLock:%d mutex:%p\n", lock, global_locks[lock]);
+#endif
   _dbus_platform_rmutex_lock (global_locks[lock]);
   return TRUE;
 }
@@ -359,6 +368,9 @@ _dbus_unlock (DBusGlobalLock lock)
   _dbus_assert (lock >= 0);
   _dbus_assert (lock < _DBUS_N_GLOBAL_LOCKS);
 
+#ifdef TRACE_LOCKS
+  _dbus_verbose ("UNLOCK DBusGlobalLock:%d mutex:%p\n", lock, global_locks[lock]);
+#endif
   _dbus_platform_rmutex_unlock (global_locks[lock]);
 }
 
