@@ -134,7 +134,7 @@ option(
   'evports',
   type: 'feature',
   value: 'auto',
-  description: 'Event ports support'
+  description: 'Solaris event ports support'
 )
 
 option(
