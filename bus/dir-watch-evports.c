@@ -302,11 +302,11 @@ bus_set_watched_dirs (BusContext *context, DBusList **directories)
 
           /* Construct full path to files within */
           buffer[0] = 0;
-          strlcat (buffer, (char*)link->data, 256);
+          strlcat (buffer, (char*)link->data, sizeof (buffer));
           if (buffer[strlen ((char*)link->data)-1] != '/') {
-            strlcat (buffer, "/", 256);
+            strlcat (buffer, "/", sizeof (buffer));
           }
-          strlcat (buffer, entry->d_name, 256);
+          strlcat (buffer, entry->d_name, sizeof (buffer));
 
           if (!_associate (buffer, num_objects, TRUE))
             continue;
