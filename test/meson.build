@@ -409,6 +409,11 @@ tests += [
         'link': [ libdbus_testutils, ],
     },
     {
+        'name': 'socket-afunix',
+        'srcs': [ 'test-socket-afunix.c' ],
+        'link': [ libdbus_testutils ],
+    },
+    {
         'name': 'printf',
         'srcs': [ 'internals/printf.c' ],
         'link': [ libdbus_testutils, ],

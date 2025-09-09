@@ -397,11 +397,12 @@ endif
 # a running dbus-daemon will be disabled if message_bus is not set.
 message_bus = get_option('message_bus')
 
+minimum_glib = '2.72'    # for AF_UNIX
 if get_option('modular_tests').disabled()
     glib = dependency('', required: false)
 else
     glib = dependency(
-        'glib-2.0', version: '>=2.40',
+        'glib-2.0', version: '>=' + minimum_glib,
         required: get_option('modular_tests'),
         fallback: ['glib', 'libglib_dep'],
         default_options: fallback_subproject_options + [

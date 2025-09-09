@@ -1,6 +1,6 @@
 option(DBUS_USE_WINE "set to 1 or ON to support running test cases with Wine" OFF)
 
-if((DBUS_ENABLE_MODULAR_TESTS OR DBUS_ENABLE_INTRUSIVE_TESTS) AND CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "Windows")
+if(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_NAME STREQUAL "Windows")
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
         find_file(WINE_EXECUTABLE
             NAMES wine
@@ -35,6 +35,7 @@ if((DBUS_ENABLE_MODULAR_TESTS OR DBUS_ENABLE_INTRUSIVE_TESTS) AND CMAKE_CROSSCOM
     set(Z_DRIVE_IF_WINE "z:")
     if(DBUS_USE_WINE AND WINE_EXECUTABLE)
         set(TEST_WRAPPER "${WINE_EXECUTABLE}")
+        message(STATUS "Using wrapper for running tests: ${TEST_WRAPPER}")
     endif()
 endif()
 
@@ -114,10 +115,18 @@ endmacro()
 # create executable and add an associated unit test
 #
 # see @ref add_helper_executable for supported parameters
+# @param ARGS <args> additional arguments added to the test command in front of the target file
+# @param ENV <env> additional environment variables to provide to the running test
+# @param LIBS <libs> additional libraries to link the executable with
 #
 macro(add_test_executable _target _source)
-    add_helper_executable(${_target} "${_source}" ${ARGN})
-    add_unit_test(${_target} ${_target})
+    set(options)
+    set(oneValueArgs)
+    set(multiValueArgs ARGS ENV LIBS)
+    cmake_parse_arguments(ATE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    add_helper_executable(${_target} "${_source}" LIBS ${ATE_LIBS})
+    add_unit_test(${_target} ${_target} ARGS ${ATE_ARGS} ENV ${ATE_ENV})
 endmacro()
 
 #
@@ -133,31 +142,45 @@ endmacro()
 #
 # @param _target target name
 # @param _source sources to add to this target
+# @param LIBS <libs> additional libraries to link the executable with
 #
 macro(add_helper_executable _target _source)
+    set(options)
+    set(oneValueArgs)
+    set(multiValueArgs LIBS)
+    cmake_parse_arguments(AHE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
     set(_sources "${_source}")
     if(WIN32 AND NOT MSVC)
         # avoid triggering UAC
         add_uac_manifest(_sources)
     endif()
     add_executable(${_target} ${_sources})
-    target_link_libraries(${_target} ${ARGN})
+    target_link_libraries(${_target} ${AHE_LIBS})
 endmacro()
 
 #
 # create executable and add an associated unit test with dbus session setup
 #
 # see @ref add_helper_executable for supported parameters
+# see @ref add_unit_test for supported parameters
 #
 macro(add_session_test_executable _target _source)
-    add_helper_executable(${_target} "${_source}" ${ARGN})
+    set(options)
+    set(oneValueArgs)
+    set(multiValueArgs ARGS ENV LIBS)
+    cmake_parse_arguments(ASTE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    add_helper_executable(${_target} "${_source}" LIBS ${ASTE_LIBS})
     add_unit_test(${_target} ${_target}
         ARGS
             ${DBUS_TEST_RUN_SESSION}
             --config-file=${DBUS_TEST_DATA}/valid-config-files/tmp-session.conf
             --dbus-daemon=${DBUS_TEST_DAEMON}
+            ${ASTE_ARGS}
         ENV
             "DBUS_SESSION_BUS_PID="
+            ${ASTE_ENV}
     )
 endmacro()
 

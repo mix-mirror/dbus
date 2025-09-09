@@ -247,11 +247,17 @@ case "$ci_distro" in
                 # cross
                 packages=(
                     "${packages[@]}"
-                    wine
                     xvfb-run
                 )
-
-                # add required repos
+                if ! zypper lr Emulators > /dev/null; then
+                    $zypper ar --refresh --no-gpgcheck \
+                        "https://download.opensuse.org/repositories/Emulators/$version/Emulators.repo"
+                fi
+                packages=(
+                    "${packages[@]}"
+                    wine-staging
+                    wine-staging-32bit
+                )
                 if [ "${ci_host%%-*}" = x86_64 ]; then
                     bits="64"
                 else

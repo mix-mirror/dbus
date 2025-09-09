@@ -59,25 +59,8 @@ init_wine() {
         addpath="$addpath$d$wb"
         d=";"
     done
-
-    # create registry file from template
-    local wineaddpath=$(echo "$addpath" | sed 's,\\,\\\\\\\\,g')
-    sed "s,@PATH@,$wineaddpath,g" ../tools/user-path.reg.in > user-path.reg
-
-    # add path to registry
-    wine regedit /C user-path.reg
-
-    # check if path(s) has been set and break if not
-    local o=$(wine cmd /C "echo %PATH%")
-    case "$o" in
-        (*z:* | *Z:*)
-            # OK
-            ;;
-        (*)
-            echo "Failed to add Unix paths '$*' to path: Wine %PATH% = $o" >&2
-            exit 1
-            ;;
-    esac
+    # setup paths for wine
+    export WINEPATH=$addpath
 }
 
 # ci_buildsys:

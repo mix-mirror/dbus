@@ -589,6 +589,9 @@ DBusSocket _dbus_listen_unix_socket  (const char     *path,
                                       dbus_bool_t     abstract,
                                       DBusError      *error);
 
+dbus_bool_t _dbus_win_check_af_unix_support (dbus_bool_t *supported,
+                                             DBusError   *error);
+
 DBusSocket _dbus_connect_exec (const char     *path,
                                char *const    argv[],
                                DBusError      *error);

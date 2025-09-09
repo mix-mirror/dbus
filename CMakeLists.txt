@@ -182,7 +182,8 @@ endif()
 
 find_package(EXPAT)
 find_package(X11)
-find_package(GLIB2)
+set(GLIB_MIN_VERSION 2.72) # for AF_UNIX
+find_package(GLIB2 ${GLIB_MIN_VERSION})
 if(GLIB2_FOUND)
     option(DBUS_WITH_GLIB "build with glib" ON)
 endif()
