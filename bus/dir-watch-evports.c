@@ -206,18 +206,18 @@ out:
 }
 
 static dbus_bool_t
-_associate (char *filepath, int index, dbus_bool_t file_only)
+_associate (char *dirpath, int index, dbus_bool_t file_only)
 {
   int res;
   struct stat sb;
   struct file_obj *fobj;
 
-  res = stat (filepath, &sb);
+  res = stat (dirpath, &sb);
   if (res < 0)
     {
       if (errno != ENOENT)
         {
-          _dbus_warn ("Cannot stat '%s'; error '%s'", filepath, _dbus_strerror (errno));
+          _dbus_warn ("Cannot stat '%s'; error '%s'", dirpath, _dbus_strerror (errno));
         }
       return FALSE;
     }
@@ -229,7 +229,7 @@ _associate (char *filepath, int index, dbus_bool_t file_only)
    * necessary after the call
    */
   fobj = (struct file_obj *)(&fobjs[index]);
-  fobj->fo_name = filepath;
+  fobj->fo_name = dirpath;
   fobj->fo_atime = sb.st_atim;
   fobj->fo_mtime = sb.st_mtim;
   fobj->fo_ctime = sb.st_ctim;
@@ -246,7 +246,7 @@ _associate (char *filepath, int index, dbus_bool_t file_only)
   res = port_associate (port, PORT_SOURCE_FILE, (uintptr_t)fobj, FILE_MODIFIED|FILE_ATTRIB, NULL);
   if (res < 0)
     {
-      _dbus_warn ("Cannot set up evport for '%s'; error '%s'", filepath, _dbus_strerror (errno));
+      _dbus_warn ("Cannot set up evport for '%s'; error '%s'", dirpath, _dbus_strerror (errno));
       return FALSE;
     }
   return TRUE;
@@ -257,8 +257,9 @@ bus_set_watched_dirs (BusContext *context, DBusList **directories)
 {
   DBusList *link;
   char buffer[256];
+  char *dirpath;
   int num_objects;
-  DIR *folder;
+  DIR *directory;
   struct dirent *entry = NULL;
 
   if (!_init_watch (context))
@@ -271,7 +272,8 @@ bus_set_watched_dirs (BusContext *context, DBusList **directories)
   link = _dbus_list_get_first_link (directories);
   while (link != NULL && num_objects < MAX_OBJECTS_TO_WATCH)
     {
-      if (!_associate ((char *)link->data, num_objects, FALSE))
+      dirpath = (char *)link->data;
+      if (!_associate (dirpath, num_objects, FALSE))
         {
           /* Currently, this implementation goes through every directory given,
            * even if some of them fail stat/association, which is different
@@ -285,15 +287,15 @@ bus_set_watched_dirs (BusContext *context, DBusList **directories)
       num_objects++;
 
       /* Go through the entire directory */
-      folder = opendir ((char *)link->data);
-      if (folder == NULL)
+      directory = opendir (dirpath);
+      if (directory == NULL)
         {
-          _dbus_warn ("Cannot read directory '%s'; error '%s'", (char *)link->data, _dbus_strerror (errno));
+          _dbus_warn ("Cannot read directory '%s'; error '%s'", dirpath, _dbus_strerror (errno));
           link = _dbus_list_get_next_link (directories, link);
           continue;
         }
 
-      while ((entry = readdir (folder)))
+      while ((entry = readdir (directory)))
         {
           if (!strcmp (entry->d_name, ".") || !strcmp (entry->d_name, ".."))
             continue;
@@ -303,8 +305,8 @@ bus_set_watched_dirs (BusContext *context, DBusList **directories)
 
           /* Construct full path to files within */
           buffer[0] = 0;
-          strlcat (buffer, (char*)link->data, sizeof (buffer));
-          if (buffer[strlen ((char*)link->data)-1] != '/')
+          strlcat (buffer, dirpath, sizeof (buffer));
+          if (buffer[strlen (dirpath)-1] != '/')
             strlcat (buffer, "/", sizeof (buffer));
           strlcat (buffer, entry->d_name, sizeof (buffer));
 
@@ -313,7 +315,7 @@ bus_set_watched_dirs (BusContext *context, DBusList **directories)
 
           num_objects++;
         }
-      closedir (folder);
+      closedir (directory);
       link = _dbus_list_get_next_link (directories, link);
     }
 
