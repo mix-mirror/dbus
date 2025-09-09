@@ -202,7 +202,7 @@ out:
 }
 
 static dbus_bool_t
-_associate (char *dirpath, int index, dbus_bool_t file_only)
+_associate (char *dirpath, size_t index, dbus_bool_t file_only)
 {
   int res;
   struct stat sb;
@@ -254,7 +254,7 @@ bus_set_watched_dirs (BusContext *context, DBusList **directories)
   DBusList *link;
   char buffer[256];
   char *dirpath;
-  int num_objects;
+  size_t num_objects;
   DIR *directory;
   struct dirent *entry = NULL;
 
