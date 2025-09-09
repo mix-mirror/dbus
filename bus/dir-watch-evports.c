@@ -208,7 +208,7 @@ out:
 static dbus_bool_t
 _associate (char *filepath, int index, dbus_bool_t file_only)
 {
-	int res;
+  int res;
   struct stat sb;
   struct file_obj *fobj;
 
@@ -222,7 +222,7 @@ _associate (char *filepath, int index, dbus_bool_t file_only)
       return FALSE;
     }
 
-  if (file_only && !S_ISREG(sb.st_mode))
+  if (file_only && !S_ISREG (sb.st_mode))
     return FALSE;
 
   /* file_obj structures can safely overlap as the data is no longer
@@ -237,15 +237,16 @@ _associate (char *filepath, int index, dbus_bool_t file_only)
   /* Event ports sadly don't let us set last_sighup to fobj directly as it only
    * checks for differences; it doesn't make timespec comparison.
    */
-  if (tslower (last_sighup, sb.st_mtim) || tslower (last_sighup, sb.st_ctim)) {
-    /* Changing one value to something different from stat forces immediate event. */
-    fobj->fo_mtime = last_sighup;
-  }
+  if (tslower (last_sighup, sb.st_mtim) || tslower (last_sighup, sb.st_ctim))
+    {
+      /* Changing one value to something different from stat forces immediate event. */
+      fobj->fo_mtime = last_sighup;
+    }
 
   res = port_associate (port, PORT_SOURCE_FILE, (uintptr_t)fobj, FILE_MODIFIED|FILE_ATTRIB, NULL);
   if (res < 0)
     {
-      _dbus_warn ("Cannot setup evport for '%s'; error '%s'", filepath, _dbus_strerror (errno));
+      _dbus_warn ("Cannot set up evport for '%s'; error '%s'", filepath, _dbus_strerror (errno));
       return FALSE;
     }
   return TRUE;
@@ -303,9 +304,8 @@ bus_set_watched_dirs (BusContext *context, DBusList **directories)
           /* Construct full path to files within */
           buffer[0] = 0;
           strlcat (buffer, (char*)link->data, sizeof (buffer));
-          if (buffer[strlen ((char*)link->data)-1] != '/') {
+          if (buffer[strlen ((char*)link->data)-1] != '/')
             strlcat (buffer, "/", sizeof (buffer));
-          }
           strlcat (buffer, entry->d_name, sizeof (buffer));
 
           if (!_associate (buffer, num_objects, TRUE))
