@@ -122,12 +122,8 @@ _init_watch (BusContext *context)
       loop = bus_context_get_loop (context);
       _dbus_loop_ref (loop);
 
-      /* This is the point since when changes to files is being watched */
-      if (clock_gettime (CLOCK_REALTIME, &last_sighup))
-        {
-          _dbus_warn ("Cannot create evport; error '%s'", _dbus_strerror (errno));
-          return FALSE;
-        }
+      /* This is the point from which changes to files are being watched. */
+      clock_gettime (CLOCK_REALTIME, &last_sighup);
     }
 
   return TRUE;
