@@ -202,7 +202,7 @@ out:
 }
 
 static dbus_bool_t
-_associate (char *dirpath, size_t index, dbus_bool_t file_only)
+_associate (const char *dirpath, size_t index, dbus_bool_t file_only)
 {
   int res;
   struct stat sb;
@@ -225,7 +225,11 @@ _associate (char *dirpath, size_t index, dbus_bool_t file_only)
    * necessary after the call
    */
   fobj = (struct file_obj *)(&fobjs[index]);
-  fobj->fo_name = dirpath;
+  /* While the file_obj->fo_name is a non-const char pointer, the value
+   * is not modified by port_associate, and the pointer can be safely
+   * modified/deallocated after the call.
+   */
+  fobj->fo_name = (char *)dirpath;
   fobj->fo_atime = sb.st_atim;
   fobj->fo_mtime = sb.st_mtim;
   fobj->fo_ctime = sb.st_ctim;
