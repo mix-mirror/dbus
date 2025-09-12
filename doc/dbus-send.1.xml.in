@@ -24,7 +24,7 @@
   <group choice='opt'><arg choice='plain'>--system </arg><arg choice='plain'>--session </arg><arg choice='plain'>--bus=<replaceable>ADDRESS</replaceable></arg><arg choice='plain'>--peer=<replaceable>ADDRESS</replaceable></arg></group>
     <arg choice='opt'>--sender=<replaceable>NAME</replaceable></arg>
     <arg choice='opt'>--dest=<replaceable>NAME</replaceable></arg>
-    <arg choice='opt'><arg choice='plain'>--print-reply </arg><arg choice='opt'><replaceable>=literal</replaceable></arg></arg>
+    <arg choice='opt'><arg choice='plain'>--print-reply</arg><arg choice='opt'>=literal</arg></arg>
     <arg choice='opt'>--reply-timeout=<replaceable>MSEC</replaceable></arg>
     <arg choice='opt'>--type=<replaceable>TYPE</replaceable></arg>
     <arg choice='plain'><replaceable>OBJECT_PATH</replaceable></arg>
