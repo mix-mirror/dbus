@@ -5556,8 +5556,9 @@
     <sect2 id="message-bus-types">
       <title>Well-known Message Bus Instances</title>
       <para>
-        Two standard message bus instances are defined here, along with how
-        to locate them and where their service files live.
+        This specification defines two standard instances of the message bus as
+        well as mechanisms to locate these buses and their respective service
+        files.
       </para>
       <sect3 id="message-bus-types-login">
         <title>Login session message bus</title>
@@ -5569,28 +5570,67 @@
         <para>
           The address of the login session message bus is given
           in the <literal>DBUS_SESSION_BUS_ADDRESS</literal> environment
-          variable. If that variable is not set, applications may
-          also try to read the address from the X Window System root
-          window property <literal>_DBUS_SESSION_BUS_ADDRESS</literal>.
-          The root window property must have type <literal>STRING</literal>.
-          The environment variable should have precedence over the
-          root window property.
+          variable. If <literal>DBUS_SESSION_BUS_ADDRESS</literal> is not set,
+          or if it's set to the string <literal>autolaunch:</literal>, the
+          system should use platform-specific methods of locating a running
+          D-Bus session server, or starting one if a running instance cannot be
+          found.
         </para>
-        <para>The address of the login session message bus is given in the
-        <literal>DBUS_SESSION_BUS_ADDRESS</literal> environment variable. If
-        DBUS_SESSION_BUS_ADDRESS is not set, or if it's set to the string
-        "autolaunch:", the system should use platform-specific methods of
-        locating a running D-Bus session server, or starting one if a running
-        instance cannot be found. Note that this mechanism is not recommended
-        for attempting to determine if a daemon is running. It is inherently
-        racy to attempt to make this determination, since the bus daemon may
-        be started just before or just after the determination is made.
-        Therefore, it is recommended that applications do not try to make this
-        determination for their functionality purposes, and instead they
-        should attempt to start the server.</para>
+        <para>
+          On Unix-like systems, if <literal>DBUS_SESSION_BUS_ADDRESS</literal>
+          is not set, a recommended platform-specific method is to use a
+          default socket path based on the XDG_RUNTIME_DIR. See <ulink
+          url="message-bus-types-login-default-session-path">the section below
+          for details</ulink>.
+        </para>
+        <para>
+          On Unix-like systems, if the above default path cannot be used,
+          another recommended platform-specific fallback is to carry out <ulink
+          url="#message-bus-types-login-x-windows">X11 autolaunching as
+          described below</ulink>.
+        </para>
+        <para>
+          On Windows systems, the recommended platform-specific fallback is to
+          carry out Windows autolaunching as described by the
+          <ulink url="meta-transports-autolaunch">autolaunch transport</ulink>.
+        </para>
 
+        <sect4 id="message-bus-types-login-default-session-path">
+          <title>Default path for session bus on Unix-like platforms</title>
+          <para>
+            This mechanism should only be used if the
+            <literal>DBUS_SESSION_BUS_ADDRESS</literal> environment variable is
+            not defined, if the <literal>XDG_RUNTIME_DIR</literal>
+            environment variable is defined and the directory specified in
+            <literal>XDG_RUNTIME_DIR</literal> exists and is suitable for use
+            (with appropriate security checks on permissions and ownership as
+            defined by the <ulink
+            url="http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html">
+            XDG Base Directory Specification</ulink>)
+          </para>
+          <para>
+            The implementation should attempt to communicate with the bus at
+            the well-known socket address
+            <literal>$XDG_RUNTIME_DIR/bus</literal> as though it had been
+            specified as a <literal>unix:path=...</literal> address. If the
+            environment variable <literal>XDG_RUNTIME_DIR</literal> is
+            undefined or if no socket exists at the specified path, the
+            implementation MUST conclude that there is no D-Bus server
+            discoverable via this mechanism, and MAY try other, lower-priority
+            mechanisms such as X11 autolaunching instead.
+          </para>
+        </sect4>
         <sect4 id="message-bus-types-login-x-windows">
           <title>X Windowing System</title>
+          <para>
+            Note that X11 autolaunching is not recommended for attempting to
+            determine if a daemon is running. It is inherently racy to attempt to
+            make this determination, since the bus daemon may be started just
+            before or just after the determination is made. Therefore, it is
+            recommended that applications do not try to make this determination
+            for their functionality purposes, and instead they should attempt to
+            start the server.
+          </para>
           <para>
             For the X Windowing System, the application must locate the
             window owner of the selection represented by the atom formed by
