@@ -154,7 +154,7 @@
  * dbus_connection_add_filter(),
  * dbus_connection_register_object_path() for more on handlers).
  * 
- * When you use dbus_connection_send() or one of its variants to send
+ * @anchor use_dbus_connection_send When you use dbus_connection_send() or one of its variants to send
  * a message, the message is added to the outgoing queue.  It's
  * actually written to the network later; either in
  * dbus_watch_handle() invoked by your main loop, or in
