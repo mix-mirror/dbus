@@ -131,6 +131,13 @@ option(
 )
 
 option(
+  'evports',
+  type: 'feature',
+  value: 'auto',
+  description: 'Solaris event ports support'
+)
+
+option(
   'launchd',
   type: 'feature',
   value: 'auto',

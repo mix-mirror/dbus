@@ -20,6 +20,7 @@ check_include_file(io.h         HAVE_IO_H)      # internal
 check_include_file(linux/close_range.h HAVE_LINUX_CLOSE_RANGE_H)
 check_include_file(linux/magic.h HAVE_LINUX_MAGIC_H)
 check_include_file(locale.h     HAVE_LOCALE_H)
+check_include_file(port.h       HAVE_PORT_H)
 check_include_file(signal.h     HAVE_SIGNAL_H)
 check_include_file(stdatomic.h  HAVE_STDATOMIC_H)
 check_include_file(stdio.h      HAVE_STDIO_H)   # dbus-sysdeps.h

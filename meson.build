@@ -499,6 +499,22 @@ else
     endif
 endif
 
+if get_option('evports').disabled()
+    use_evports = false
+else
+    use_evports = (
+      cc.has_header('port.h', args: compile_args_c) and
+      cc.has_function(
+          'port_create',
+          prefix: '#include <port.h>',
+          args: compile_args_c,
+      )
+    )
+    if get_option('evports').enabled() and not use_evports
+        error('event ports support requested but not found')
+    endif
+endif
+
 if get_option('launchd').disabled()
     use_launchd = false
 else
@@ -1431,6 +1447,7 @@ summary_dict += {
     'Building AppArmor support': apparmor.found(),
     'Building inotify support': use_inotify,
     'Building kqueue support':  use_kqueue,
+    'Building evports support': use_evports,
     'Building systemd support': use_systemd,
     'Building elogind support': use_elogind,
     'Traditional activation':   use_traditional_activation,
