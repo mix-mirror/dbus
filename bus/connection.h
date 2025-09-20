@@ -87,6 +87,7 @@ void        bus_connection_request_headers       (DBusConnection  *connection,
 /* called by policy.c */
 dbus_bool_t bus_connection_is_queued_owner_by_prefix (DBusConnection *connection,
                                                       const char *name_prefix);
+const DBusList *bus_connection_get_owned_services_list (DBusConnection *connection);
 
 /* called by signals.c */
 dbus_bool_t bus_connection_add_match_rule      (DBusConnection *connection,

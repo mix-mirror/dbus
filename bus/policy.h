@@ -59,7 +59,8 @@ struct BusPolicyRule
   BusPolicyRuleType type;
 
   unsigned int allow : 1; /**< #TRUE if this allows, #FALSE if it denies */
-  
+  unsigned int score : 20; /**< for keeping the importance of the rule */
+
   union
   {
     struct
@@ -172,9 +173,6 @@ dbus_bool_t      bus_client_policy_check_can_receive (BusClientPolicy  *policy,
                                                       dbus_int32_t     *toggles);
 dbus_bool_t      bus_client_policy_check_can_own     (BusClientPolicy  *policy,
                                                       const DBusString *service_name);
-dbus_bool_t      bus_client_policy_append_rule       (BusClientPolicy  *policy,
-                                                      BusPolicyRule    *rule);
-void             bus_client_policy_optimize          (BusClientPolicy  *policy);
 
 #ifdef DBUS_ENABLE_EMBEDDED_TESTS
 dbus_bool_t      bus_policy_check_can_own     (BusPolicy  *policy,
