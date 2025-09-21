@@ -119,9 +119,9 @@
   <!-- <limit name="service_start_timeout">25000</limit> -->
   <!-- <limit name="auth_timeout">30000</limit> -->
   <!-- <limit name="pending_fd_timeout">150000</limit> -->
-  <!-- <limit name="max_completed_connections">2048</limit> -->
+  <!-- <limit name="max_completed_connections">4096</limit> -->
   <!-- <limit name="max_incomplete_connections">64</limit> -->
-  <!-- <limit name="max_connections_per_user">256</limit> -->
+  <!-- <limit name="max_connections_per_user">512</limit> -->
   <!-- <limit name="max_pending_service_starts">512</limit> -->
   <!-- <limit name="max_names_per_connection">512</limit> -->
   <!-- <limit name="max_match_rules_per_connection">512</limit> -->

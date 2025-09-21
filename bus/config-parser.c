@@ -518,14 +518,14 @@ bus_config_parser_new (const DBusString      *basedir,
       parser->limits.pending_fd_timeout = 150000; /* 2.5 minutes */
       
       parser->limits.max_incomplete_connections = 64;
-      parser->limits.max_connections_per_user = 256;
+      parser->limits.max_connections_per_user = 512;
       parser->limits.max_containers_per_user = 16;
       
       /* Note that max_completed_connections / max_connections_per_user
        * is the number of users that would have to work together to
        * DOS all the other users. The same applies to containers.
        */
-      parser->limits.max_completed_connections = 2048;
+      parser->limits.max_completed_connections = 4096;
       parser->limits.max_containers = 512;
       /* Similarly max_connections_per_user / max_connections_per_container
        * is the number of app-containers per user that would have to work
