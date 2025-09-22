@@ -5,14 +5,8 @@
 	<key>Label</key>
 	<string>org.freedesktop.dbus-session</string>
 
-	<key>ServiceIPC</key>
+	<key>ΚeepAlive</key>
 	<true/>
-
-	<!-- Please uncomment on 10.4; OnDemand doesn't work properly there. -->
-	<!--
-	<key>OnDemand</key>
-	<false />
-	-->
 
 	<key>ProgramArguments</key>
 	<array>
