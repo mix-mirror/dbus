@@ -30,7 +30,7 @@
 
 #if !defined (DBUS_DISABLE_ASSERT) || defined(DBUS_ENABLE_EMBEDDED_TESTS)
 
-#if defined(_MSC_VER) || defined(DBUS_WINCE)
+#if defined(_MSC_VER) || defined(DBUS_WINCE) || defined(_M_ARM64)
 # ifdef BACKTRACES
 #  undef BACKTRACES
 # endif
