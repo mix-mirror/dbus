@@ -275,6 +275,9 @@ dbus_bool_t dbus_message_iter_next             (DBusMessageIter *iter);
 DBUS_EXPORT
 char*       dbus_message_iter_get_signature    (DBusMessageIter *iter);
 DBUS_EXPORT
+dbus_bool_t dbus_message_iter_has_signature    (DBusMessageIter *iter,
+                                                const char *signature);
+DBUS_EXPORT
 int         dbus_message_iter_get_arg_type     (DBusMessageIter *iter);
 DBUS_EXPORT
 int         dbus_message_iter_get_element_type (DBusMessageIter *iter);

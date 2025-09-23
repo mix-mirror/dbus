@@ -195,8 +195,18 @@ iterate_fully (DBusMessageIter *iter,
   while (TRUE)
     {
       int arg_type = dbus_message_iter_get_arg_type (iter);
+      char *signature = dbus_message_iter_get_signature (iter);
       dbus_bool_t should_have_next;
       dbus_bool_t had_next;
+
+      if (signature != NULL)
+        {
+          g_assert_true (dbus_message_iter_has_signature (iter, signature));
+          g_assert_false (dbus_message_iter_has_signature (iter, "invalid"));
+          if (!g_str_equal (signature, "a{sv}"))
+            g_assert_false (dbus_message_iter_has_signature (iter, "a{sv}"));
+          dbus_free (signature);
+        }
 
       if (arg_type == DBUS_TYPE_INVALID)
         return;   /* end of iteration */

@@ -2319,6 +2319,36 @@ oom:
 }
 
 /**
+ * Checks whether the current item pointed to by an iterator has the given signature;
+ * see dbus_message_get_signature() for more details on what the signature looks like.
+ *
+ * @param iter the iterator
+ * @param signature typecode array
+ * @returns #TRUE if iterator has the given signature
+ */
+dbus_bool_t
+dbus_message_iter_has_signature (DBusMessageIter *iter, const char *signature)
+{
+  DBusMessageRealIter *real = (DBusMessageRealIter *)iter;
+  const DBusString *iter_sig;
+  DBusString actual_sig;
+  int start, len;
+
+  _dbus_return_val_if_fail (iter != NULL, FALSE);
+  _dbus_return_val_if_fail (signature != NULL, FALSE);
+  _dbus_return_val_if_fail (_dbus_message_iter_check (real), FALSE);
+  _dbus_return_val_if_fail (real->iter_type == DBUS_MESSAGE_ITER_TYPE_READER, FALSE);
+
+  _dbus_type_reader_get_signature (&real->u.reader, &iter_sig, &start, &len);
+  if (_dbus_string_get_byte (iter_sig, start) == DBUS_TYPE_INVALID)
+    len = 0;
+
+  _dbus_string_init_const_len (&actual_sig, _dbus_string_get_const_data (iter_sig) + start, len);
+
+  return _dbus_string_equal_c_str (&actual_sig, signature);
+}
+
+/**
  * Reads a basic-typed value from the message iterator.
  * Basic types are the non-containers such as integer and string.
  *
