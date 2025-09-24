@@ -92,6 +92,21 @@ endif()
 
 check_struct_member(cmsgcred cmcred_pid "sys/types.h;sys/socket.h" HAVE_CMSGCRED)   #  dbus-sysdeps.c
 
+if(NOT WIN32)
+    # Set up default visibility, will be overridden by DBUS_xxx_EXPORT defined in dbus-macros.h
+    include(CheckCCompilerFlag)
+    include(CheckCXXCompilerFlag)
+    set(_flag "-fvisibility=hidden")
+    check_c_compiler_flag(${_flag} HAVE_C_VISIBILITY_HIDDEN)
+    check_cxx_compiler_flag(${_flag} HAVE_CXX_VISIBILITY_HIDDEN)
+    if(HAVE_C_VISIBILITY_HIDDEN)
+        string(APPEND CMAKE_C_FLAGS " ${_flag}")
+    endif()
+    if(HAVE_CXX_VISIBILITY_HIDDEN)
+        string(APPEND CMAKE_CXX_FLAGS " ${_flag}")
+    endif()
+endif()
+
 CHECK_C_SOURCE_COMPILES("
 #ifndef __linux__
 #error This is not Linux
