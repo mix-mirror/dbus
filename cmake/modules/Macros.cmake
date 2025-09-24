@@ -301,17 +301,64 @@ macro(add_library_version_info _sources _name)
 endmacro()
 
 #
-# provide option with three states AUTO, ON, OFF
+# provide option with multiple values
 #
-macro(add_auto_option _name _text _default)
+macro(add_multi_option _name _text _default _values)
     if(NOT DEFINED ${_name})
         set(${_name} ${_default} CACHE STRING "${_text}" FORCE)
     else()
         set(${_name} ${_default} CACHE STRING "${_text}")
     endif()
-    set_property(CACHE ${_name} PROPERTY STRINGS AUTO ON OFF)
+    set_property(CACHE ${_name} PROPERTY STRINGS ${_values})
 endmacro()
 
+#
+# Ensure that if a multi state feature is set to ON,
+# its requirements have been met. Fail with a fatal error if not.
+#
+# _name: name of a variable ENABLE_FOO representing a tristate ON/OFF/AUTO feature
+# _text: human-readable description of the feature enabled by _name, for the
+#        error message
+# _var: name of a variable representing a system property we checked for,
+#       such as an executable that must exist for the feature enabled by _name to work
+# _vartext: what we checked for, for the error message
+#
+macro(check_multi_option _name _text _var _vartext)
+    set(_nameval ${${_name}})
+    set(_varval ${${_var}})
+    #message("debug: _name ${_name} _nameval \"${_nameval}\"  _var ${_var} ${_varval}")
+    if("${_nameval}" AND NOT "${_nameval}" STREQUAL "AUTO" AND NOT "${_varval}")
+        message(FATAL_ERROR "${_text} requested but ${_vartext} not found")
+    endif()
+endmacro()
+
+#
+# Set the state of a variable depending on the state of an 'auto' option
+# and a system property.
+#
+# _name: name of a variable ENABLE_FOO representing a tristate ON/OFF/AUTO feature
+# _var: name of a variable representing a system property we checked for,
+#       such as an executable that must exist for the feature enabled by _name to work
+# _result: name of the variable to which the determined state is assigned
+#
+macro(set_from_multi_option _name _var _result)
+    set(_nameval ${${_name}})
+    set(_varval ${${_var}})
+    if(NOT _nameval OR (_nameval AND NOT _varval))
+        #message("debug: _name ${_name} = ${_nameval}  _var ${_var} = ${_varval} ${_result} -> OFF")
+        set(${_result} OFF PARENT_SCOPE)
+    else()
+        #message("debug: _name ${_name} = ${_nameval}  _var ${_var} = ${_varval} ${_result} -> ON")
+        set(${_result} ON PARENT_SCOPE)
+    endif()
+endmacro()
+
+#
+# provide option with three states AUTO, ON, OFF
+#
+macro(add_auto_option _name _text _default)
+    add_multi_option(${_name} ${_text} ${_default} "AUTO;ON;OFF")
+endmacro()
 
 #
 # Ensure that if a tristate ON/OFF/AUTO feature is set to ON,
@@ -325,12 +372,20 @@ endmacro()
 # _vartext: what we checked for, for the error message
 #
 macro(check_auto_option _name _text _var _vartext)
-    set(_nameval ${${_name}})
-    set(_varval ${${_var}})
-    #message("debug: _name ${_name} ${_nameval}  _var ${_var} ${_varval}")
-    if(${_nameval} AND NOT ${_nameval} STREQUAL "AUTO" AND NOT ${_varval})
-        message(FATAL_ERROR "${_text} requested but ${_vartext} not found")
-    endif()
+    check_multi_option(${_name} ${_text} ${_var} ${_vartext})
+endmacro()
+
+#
+# Set the state of a variable depending on the state of an 'auto' option
+# and a system property.
+#
+# _name: name of a variable ENABLE_FOO representing a tristate ON/OFF/AUTO feature
+# _var: name of a variable representing a system property we checked for,
+#       such as an executable that must exist for the feature enabled by _name to work
+# _result: name of the variable to which the determined state is assigned
+#
+macro(set_from_auto_option _name _var _result)
+    set_from_multi_option(${_name} ${_var} ${_result})
 endmacro()
 
 #

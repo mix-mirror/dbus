@@ -7,6 +7,8 @@ set(CMAKE_LEGACY_CYGWIN_WIN32 0)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
+message(STATUS "Found CMake: ${CMAKE_COMMAND} (found version \"${CMAKE_VERSION}\")")
+
 # detect version
 include(MacrosMeson)
 meson_init(meson.build)
@@ -593,7 +595,7 @@ set(DBUS_SYSTEM_BUS_DEFAULT_ADDRESS "unix:path=${DBUS_RUNSTATEDIR}/dbus/system_b
 # Because we only run it on Unix, it's fine to make it a shell script.
 if(UNIX AND (NOT CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows"))
     execute_process(
-        COMMAND "${CMAKE_SOURCE_DIR}/tools/check-runstatedir.sh" "${DBUS_RUNSTATEDIR}/dbus/system_bus_socket")
+        COMMAND "${PROJECT_SOURCE_DIR}/tools/check-runstatedir.sh" "${DBUS_RUNSTATEDIR}/dbus/system_bus_socket")
 endif()
 
 if(WIN32)
@@ -719,8 +721,8 @@ message("        install libexecdir:       ${CMAKE_INSTALL_FULL_LIBEXECDIR}    "
 message("        install bindir:           ${CMAKE_INSTALL_FULL_BINDIR}        ")
 message("        install sysconfdir:       ${CMAKE_INSTALL_FULL_SYSCONFDIR}    ")
 message("        install datadir:          ${CMAKE_INSTALL_FULL_DATADIR}       ")
-message("        source code location:     ${CMAKE_SOURCE_DIR}                 ")
-message("        build dir:                ${CMAKE_BINARY_DIR}                 ")
+message("        source code location:     ${PROJECT_SOURCE_DIR}               ")
+message("        build dir:                ${PROJECT_BINARY_DIR}               ")
 message("        c compiler:               ${C_COMPILER}                       ")
 message("        cflags:                   ${CMAKE_C_FLAGS}                    ")
 message("        cflags debug:             ${CMAKE_C_FLAGS_DEBUG}              ")
