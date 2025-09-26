@@ -42,6 +42,7 @@ struct BusConfigParser
   DBusString user;                  /**< User the dbus-daemon runs as */
   DBusString bus_type;              /**< Message bus type */
   DBusString service_helper;        /**< Location of the setuid helper */
+  DBusString replycheck;            /**< SELinux checking of reply messages */
   DBusList *service_dirs;           /**< Directories to look for services in */
 };
 
@@ -103,11 +104,15 @@ bus_config_parser_new (const DBusString             *basedir,
     goto failed_type;
   if (!_dbus_string_init (&parser->service_helper))
     goto failed_helper;
+  if (!_dbus_string_init (&parser->replycheck))
+    goto failed_reply;
 
   /* woot! */
   return parser;
 
 /* argh. we have do do this carefully because of OOM */
+failed_reply:
+  _dbus_string_free (&parser->service_helper);
 failed_helper:
   _dbus_string_free (&parser->bus_type);
 failed_type:
@@ -123,6 +128,7 @@ bus_config_parser_unref (BusConfigParser *parser)
 {
   _dbus_string_free (&parser->user);
   _dbus_string_free (&parser->service_helper);
+  _dbus_string_free (&parser->replycheck);
   _dbus_string_free (&parser->bus_type);
   _dbus_list_clear_full (&parser->service_dirs, dbus_free);
   dbus_free (parser);
@@ -144,6 +150,7 @@ bus_config_parser_start_element (BusConfigParser   *parser,
     case ELEMENT_SERVICEHELPER:
     case ELEMENT_USER:
     case ELEMENT_CONFIGTYPE:
+    case ELEMENT_REPLYCHECK:
       /* content about to be handled */
       break;
 
@@ -283,6 +290,28 @@ bus_config_parser_content (BusConfigParser   *parser,
             BUS_SET_OOM (error);
             goto out_content;
           }
+      }
+      break;
+
+    case ELEMENT_REPLYCHECK:
+      {
+        const char* content_string;
+        if (!_dbus_string_copy (&content_sane, 0, &parser->replycheck, 0))
+          {
+            BUS_SET_OOM (error);
+            goto out_content;
+          }
+
+          content_string = _dbus_string_get_const_data (&content_sane);
+          if (strcmp(content_string, "none") != 0 &&
+            strcmp(content_string, "send") != 0 &&
+            strcmp(content_string, "reply_with_fallback") != 0 &&
+            strcmp(content_string, "reply") != 0)
+            {
+              dbus_set_error (error, DBUS_ERROR_FAILED,
+                              "Element <replycheck> has invalid content %s", content_string);
+              goto out_content;
+            }
       }
       break;
 

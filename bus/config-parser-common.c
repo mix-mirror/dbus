@@ -113,6 +113,10 @@ bus_config_parser_element_name_to_type (const char *name)
     {
       return ELEMENT_ASSOCIATE;
     }
+  else if (strcmp (name, "replycheck") == 0)
+    {
+        return ELEMENT_REPLYCHECK;
+    }
   else if (strcmp (name, "syslog") == 0)
     {
       return ELEMENT_SYSLOG;
@@ -177,6 +181,8 @@ bus_config_parser_element_type_to_name (ElementType type)
       return "selinux";
     case ELEMENT_ASSOCIATE:
       return "associate";
+    case ELEMENT_REPLYCHECK:
+        return "replycheck";
     case ELEMENT_SYSLOG:
       return "syslog";
     case ELEMENT_KEEP_UMASK:

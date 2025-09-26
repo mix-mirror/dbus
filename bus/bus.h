@@ -103,6 +103,7 @@ dbus_bool_t       bus_context_get_id                             (BusContext    
 const char*       bus_context_get_type                           (BusContext       *context);
 const char*       bus_context_get_address                        (BusContext       *context);
 const char*       bus_context_get_servicehelper                  (BusContext       *context);
+const char*       bus_context_get_replycheck_verb                (BusContext       *context);
 dbus_bool_t       bus_context_get_systemd_activation             (BusContext       *context);
 BusRegistry*      bus_context_get_registry                       (BusContext       *context);
 BusConnections*   bus_context_get_connections                    (BusContext       *context);

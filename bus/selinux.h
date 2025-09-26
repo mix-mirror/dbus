@@ -57,6 +57,8 @@ dbus_bool_t bus_selinux_allows_acquire_service (DBusConnection *connection,
 
 dbus_bool_t bus_selinux_allows_send            (DBusConnection *sender,
                                                 DBusConnection *proposed_recipient,
+						dbus_bool_t    requested_reply,
+						const char     *replycheck_verb,
 						const char     *msgtype, /* Supplementary audit data */
 						const char     *interface,
 						const char     *member,
@@ -68,4 +70,5 @@ dbus_bool_t bus_selinux_allows_send            (DBusConnection *sender,
 BusSELinuxID* bus_selinux_init_connection_id (DBusConnection *connection,
                                               DBusError      *error);
 
+const char* bus_selinux_convert_replycheck_option(const char *replycheck_option);
 #endif /* BUS_SELINUX_H */

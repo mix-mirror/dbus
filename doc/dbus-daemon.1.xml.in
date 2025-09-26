@@ -1186,6 +1186,7 @@ More details below.</para>
 <itemizedlist remap='TP'>
 
   <listitem><para><emphasis remap='I'>&lt;associate&gt;</emphasis></para></listitem>
+  <listitem><para><emphasis remap='I'>&lt;replycheck&gt;</emphasis></para></listitem>
 
 
 </itemizedlist>
@@ -1218,6 +1219,23 @@ Right now the default will be the security context of the bus itself.</para>
 
 <para>If two &lt;associate&gt; elements specify the same name, the element
 appearing later in the configuration file will be used.</para>
+
+
+<para>The &lt;replycheck&gt; element controls how reply messages are checked.
+There are four options:</para>
+<literallayout remap='.nf'>
+      "send"                       : the same SELinux permission as for request
+                                     messages is used (the previous default)
+      "none"                       : reply messages are not checked
+      "reply"                      : reply messages are checked with a distinct
+                                     SELinux permission
+      "reply_with_fallback"        : reply messages are checked with a distinct
+                                     SELinux permission, if this permission is
+                                     defined in the loaded SELinux policy.
+                                     Otherwise the same permission as for request
+                                     messages is used
+</literallayout> <!-- .fi -->
+
 
 <itemizedlist remap='TP'>
 
@@ -1457,7 +1475,8 @@ that class.</para>
 <para>First, any time a message is routed from one connection to another
 connection, the bus daemon will check permissions with the security context of
 the first connection as source, security context of the second connection
-as target, object class "dbus" and requested permission "send_msg".</para>
+as target, object class "dbus" and requested permission "send_msg" or "reply_msg",
+depending on the message type and the &lt;replycheck&gt; setting.</para>
 
 
 <para>If a security context is not available for a connection

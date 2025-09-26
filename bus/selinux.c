@@ -379,6 +379,7 @@ error:
  * granted from the connection to the message bus or to another
  * optionally supplied security identifier (e.g. for a service
  * context).  Currently these permissions are either send_msg or
+ * reply_msg (depending in the replycheck configuration) or
  * acquire_svc in the dbus class.
  *
  * @param sender_sid source security context
@@ -532,6 +533,8 @@ bus_selinux_allows_acquire_service (DBusConnection     *connection,
 dbus_bool_t
 bus_selinux_allows_send (DBusConnection     *sender,
                          DBusConnection     *proposed_recipient,
+			 dbus_bool_t        requested_reply,
+			 const char         *replycheck_verb,
 			 const char         *msgtype,
 			 const char         *interface,
 			 const char         *member,
@@ -553,6 +556,10 @@ bus_selinux_allows_send (DBusConnection     *sender,
 
   /* We do not mediate activation attempts yet. */
   if (activation_entry)
+    return TRUE;
+
+  /* Skip check on reply messages. */
+  if (requested_reply && !replycheck_verb)
     return TRUE;
 
   if (!sender || !dbus_connection_get_unix_process_id (sender, &spid))
@@ -623,10 +630,10 @@ bus_selinux_allows_send (DBusConnection     *sender,
   else
     recipient_sid = BUS_SID_FROM_SELINUX (bus_sid);
 
-  ret = bus_selinux_check (sender_sid, 
+  ret = bus_selinux_check (sender_sid,
 			   recipient_sid,
 			   "dbus",
-			   "send_msg",
+			   requested_reply ? replycheck_verb : "send_msg",
 			   &auxdata);
 
   _dbus_string_free (&auxdata);
@@ -993,5 +1000,33 @@ bus_selinux_shutdown (void)
 
       avc_destroy ();
     }
+#endif /* HAVE_SELINUX */
+}
+
+/**
+ * Convert the replycheck configuraion string into the SELinux permission verb.
+ */
+const char*
+bus_selinux_convert_replycheck_option(const char *replycheck_option)
+{
+#ifdef HAVE_SELINUX
+    security_class_t security_class;
+
+    if (replycheck_option && strcmp (replycheck_option, "none") == 0)
+      return NULL;
+
+    if (replycheck_option && strcmp (replycheck_option, "send") == 0)
+      return "send_msg";
+
+    if (replycheck_option && strcmp (replycheck_option, "reply") == 0)
+      return "reply_msg";
+
+    security_class = string_to_security_class ("dbus");
+    if (security_class != 0 && string_to_av_perm (security_class, "reply_msg") != 0)
+      return "reply_msg";
+
+    return "send_msg";
+#else
+    return NULL;
 #endif /* HAVE_SELINUX */
 }

@@ -59,11 +59,13 @@
 <!ELEMENT limit (#PCDATA)>
 <!ATTLIST limit name CDATA #REQUIRED>
 
-<!ELEMENT selinux (associate)*>
+<!ELEMENT selinux (associate|
+                   replycheck)*>
 <!ELEMENT associate EMPTY>
 <!ATTLIST associate
           own CDATA #REQUIRED
           context CDATA #REQUIRED>
+<!ELEMENT replycheck (#PCDATA)>
 
 <!ELEMENT apparmor EMPTY>
 <!ATTLIST apparmor

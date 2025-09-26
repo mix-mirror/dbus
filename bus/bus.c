@@ -60,6 +60,7 @@ struct BusContext
   char *config_file;
   char *type;
   char *servicehelper;
+  char *replycheck_verb;
   char *address;
   char *pidfile;
   char *user;
@@ -571,6 +572,7 @@ process_config_every_time (BusContext      *context,
   DBusList **dirs;
   char *addr;
   const char *servicehelper;
+  const char *replycheck_verb;
   char *s;
 
   dbus_bool_t retval;
@@ -665,6 +667,21 @@ process_config_every_time (BusContext      *context,
     {
       dbus_free(context->servicehelper);
       context->servicehelper = s;
+    }
+
+  /* and the replycheck */
+  replycheck_verb = bus_selinux_convert_replycheck_option (bus_config_parser_get_replycheck (parser));
+
+  s = _dbus_strdup(replycheck_verb);
+  if (s == NULL && replycheck_verb != NULL)
+    {
+      BUS_SET_OOM (error);
+      goto failed;
+    }
+  else
+    {
+      dbus_free(context->replycheck_verb);
+      context->replycheck_verb = s;
     }
 
   /* Create activation subsystem */
@@ -1307,6 +1324,7 @@ bus_context_unref (BusContext *context)
       dbus_free (context->address);
       dbus_free (context->user);
       dbus_free (context->servicehelper);
+      dbus_free (context->replycheck_verb);
 
       if (context->pidfile)
 	{
@@ -1347,6 +1365,12 @@ const char*
 bus_context_get_servicehelper (BusContext *context)
 {
   return context->servicehelper;
+}
+
+const char*
+bus_context_get_replycheck_verb (BusContext *context)
+{
+    return context->replycheck_verb;
 }
 
 dbus_bool_t
@@ -1793,6 +1817,8 @@ bus_context_check_security_policy (BusContext     *context,
        * go on with the standard checks.
        */
       if (!bus_selinux_allows_send (sender, proposed_recipient,
+                                    requested_reply,
+                                    bus_context_get_replycheck_verb (context),
                                     dbus_message_type_to_string (dbus_message_get_type (message)),
                                     dbus_message_get_interface (message),
                                     dbus_message_get_member (message),

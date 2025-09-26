@@ -117,6 +117,8 @@ struct BusConfigParser
 
   DBusHashTable *service_context_table; /**< Map service names to SELinux contexts */
 
+  char *replycheck;      /**< What permission verb to use on message replies */
+
   unsigned int fork : 1; /**< TRUE to fork into daemon mode */
 
   unsigned int syslog : 1; /**< TRUE to enable syslog */
@@ -404,6 +406,13 @@ merge_included (BusConfigParser *parser,
       included->servicehelper = NULL;
     }
 
+  if (included->replycheck != NULL)
+    {
+      dbus_free (parser->replycheck);
+      parser->replycheck = included->replycheck;
+      included->replycheck = NULL;
+    }
+
   while ((link = _dbus_list_pop_first_link (&included->listen_on)))
     _dbus_list_append_link (&parser->listen_on, link);
 
@@ -587,6 +596,7 @@ bus_config_parser_unref (BusConfigParser *parser)
       dbus_free (parser->servicehelper);
       dbus_free (parser->bus_type);
       dbus_free (parser->pidfile);
+      dbus_free (parser->replycheck);
 
       _dbus_list_clear_full (&parser->listen_on, dbus_free);
       _dbus_list_clear_full (&parser->service_dirs,
@@ -1999,6 +2009,19 @@ start_selinux_child (BusConfigParser   *parser,
 
       return TRUE;
     }
+  else if (strcmp (element_name, "replycheck") == 0)
+    {
+      if (!check_no_attributes (parser, "replycheck", attribute_names, attribute_values, error))
+          return FALSE;
+
+      if (push_element (parser, ELEMENT_REPLYCHECK) == NULL)
+        {
+          BUS_SET_OOM (error);
+          return FALSE;
+        }
+
+      return TRUE;
+    }
   else
     {
       dbus_set_error (error, DBUS_ERROR_FAILED,
@@ -2297,6 +2320,7 @@ bus_config_parser_end_element (BusConfigParser   *parser,
     case ELEMENT_SERVICEHELPER:
     case ELEMENT_INCLUDEDIR:
     case ELEMENT_LIMIT:
+    case ELEMENT_REPLYCHECK:
       if (!e->had_content)
         {
           dbus_set_error (error, DBUS_ERROR_FAILED,
@@ -2890,6 +2914,20 @@ bus_config_parser_content (BusConfigParser   *parser,
                        e->d.limit.name);
       }
       break;
+
+    case ELEMENT_REPLYCHECK:
+      {
+        char *s;
+
+        e->had_content = TRUE;
+
+        if (!_dbus_string_copy_data (content, &s))
+            goto nomem;
+
+        dbus_free (parser->replycheck);
+        parser->replycheck = s;
+      }
+      break;
     }
 
   _DBUS_ASSERT_ERROR_IS_CLEAR (error);
@@ -2995,6 +3033,12 @@ const char *
 bus_config_parser_get_servicehelper (BusConfigParser   *parser)
 {
   return parser->servicehelper;
+}
+
+const char *
+bus_config_parser_get_replycheck (BusConfigParser   *parser)
+{
+    return parser->replycheck;
 }
 
 BusPolicy*
@@ -3390,6 +3434,7 @@ elements_equal (const Element *a,
     case ELEMENT_CONFIGTYPE:
     case ELEMENT_SELINUX:
     case ELEMENT_ASSOCIATE:
+    case ELEMENT_REPLYCHECK:
     case ELEMENT_STANDARD_SESSION_SERVICEDIRS:
     case ELEMENT_STANDARD_SYSTEM_SERVICEDIRS:
     case ELEMENT_KEEP_UMASK:
@@ -3520,7 +3565,7 @@ config_parsers_equal (const BusConfigParser *a,
 
   if (!lists_of_service_dirs_equal (a->service_dirs, b->service_dirs))
     return FALSE;
-  
+
   /* FIXME: compare policy */
 
   /* FIXME: compare service selinux ID table */
@@ -3529,6 +3574,9 @@ config_parsers_equal (const BusConfigParser *a,
     return FALSE;
 
   if (!strings_equal_or_both_null (a->pidfile, b->pidfile))
+    return FALSE;
+
+  if (!strings_equal_or_both_null (a->replycheck, b->replycheck))
     return FALSE;
 
   if (! bools_equal (a->fork, b->fork))
