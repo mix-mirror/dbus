@@ -57,4 +57,5 @@
   <limit name="max_names_per_connection">50000</limit>
   <limit name="max_match_rules_per_connection">50000</limit>
   <limit name="max_replies_per_connection">50000</limit>
+  <limit name="max_messages_for_service_per_connection">25000</limit>
 </busconfig>

@@ -15,4 +15,6 @@
   </policy>
 
   <limit name="max_replies_per_connection">3</limit>
+  <!-- Ensure that the limit for sending messages to a single service is not reached -->
+  <limit name="max_messages_for_service_per_connection">10000</limit>
 </busconfig>

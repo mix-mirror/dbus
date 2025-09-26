@@ -67,6 +67,7 @@ typedef struct
   int max_services_per_connection;  /**< Max number of owned services for a single connection */
   int max_match_rules_per_connection; /**< Max number of match rules for a single connection */
   int max_replies_per_connection;     /**< Max number of replies that can be pending for each connection */
+  int max_messages_for_service_per_connection;     /**< Max number of messages that can be pending for a single service per connection */
   int reply_timeout;                  /**< How long to wait before timing out a reply */
   int max_containers;               /**< Max number of restricted servers for app-containers */
   int max_containers_per_user;      /**< Max number of restricted servers for app-containers, per user */
@@ -129,6 +130,8 @@ int               bus_context_get_max_pending_activations        (BusContext    
 int               bus_context_get_max_services_per_connection    (BusContext       *context);
 int               bus_context_get_max_match_rules_per_connection (BusContext       *context);
 int               bus_context_get_max_replies_per_connection     (BusContext       *context);
+int               bus_context_get_max_messages_for_service_per_connection
+                                                                 (BusContext       *context);
 int               bus_context_get_reply_timeout                  (BusContext       *context);
 int               bus_context_get_max_containers                 (BusContext       *context);
 int               bus_context_get_max_containers_per_user        (BusContext       *context);

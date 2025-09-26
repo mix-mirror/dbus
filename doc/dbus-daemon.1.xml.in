@@ -854,6 +854,9 @@ Available limit names are:</para>
       "max_replies_per_connection" : max number of pending method
                                      replies per connection
                                      (number of calls-in-progress)
+      "max_messages_for_service_per_connection": max number of pending method
+                                                 calls for a single service per
+                                                 connection.
       "reply_timeout"              : milliseconds (thousandths)
                                      until a method call times out
 </literallayout> <!-- .fi -->
