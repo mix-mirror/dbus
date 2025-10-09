@@ -125,7 +125,7 @@ main (int argc, char *argv[])
   if (get_uuid && ensure_uuid)
     {
       fprintf (stderr, "Can't specify both --get and --ensure\n");
-      exit (1);
+      return 1;
     }
 
   dbus_error_init (&error);
@@ -155,10 +155,10 @@ main (int argc, char *argv[])
     {
       fprintf (stderr, "%s\n", error.message);
       dbus_error_free (&error);
-      exit (1);
+      return 1;
     }
   else
     {
-      exit (0);
+      return 0;
     }
 }
