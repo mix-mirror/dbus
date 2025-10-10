@@ -351,7 +351,12 @@ extern "C" {
  */
 #define DBUS_MINIMUM_HEADER_SIZE 16
 
-/* Errors */
+/**
+ * Errors:
+ *
+ * All org.freedesktop.DBus.Error.* have a string argument, which is the error
+ * message.
+ */
 /* WARNING these get autoconverted to an enum in dbus-glib.h. Thus,
  * if you change the order it breaks the ABI. Keep them in order.
  * Also, don't change the formatting since that will break the sed
