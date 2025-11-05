@@ -1,3 +1,7 @@
+/*
+ * SPDX-License-Identifier: AFL-2.1 OR GPL-2.0-or-later
+ */
+
 #include <config.h>
 #include <stdio.h>
 #include <stdlib.h>

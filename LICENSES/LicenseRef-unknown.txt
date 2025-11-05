@@ -1,0 +1,18 @@
+Several older source files were contributed to dbus without explicitly
+specifying a license or a copyright holder. A reasonable assumption is
+that those files are probably intended to be licensed under
+"AFL-2.1 OR GPL-2.0-or-later".
+
+Other projects wishing to reuse those source files should do whatever
+level of legal checking and research they consider to be appropriate.
+
+A note explaining why this license is useful has been added at
+https://gitlab.freedesktop.org/dbus/dbus/-/merge_requests/304#note_2044026.
+The following text has been slightly modified as several files are
+affected:
+
+...
+The fact that it’s not MIT-licensed would be machine-readable, and we
+would avoid the situation where someone accidentally does add
+SPDX-License-Identifier: MIT (or some other valid license) to the
+file(s) later on in a second pass without realising the history here.
