@@ -204,6 +204,9 @@
 /* Define to use epoll(4) on Linux */
 #cmakedefine DBUS_HAVE_LINUX_EPOLL 1
 
+/* Define if kqueue(2) can be copied during fork(2) */
+#cmakedefine DBUS_HAVE_KQUEUE_CPONFORK 1
+
 /* Use the gcc __sync extension */
 #cmakedefine01 DBUS_USE_SYNC
 

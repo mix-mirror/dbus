@@ -232,6 +232,13 @@ if(DBUS_HAVE_LINUX_EPOLL)
     )
 endif()
 
+if(DBUS_HAVE_KQUEUE_CPONFORK)
+    set(DBUS_UTIL_SOURCES
+        ${DBUS_UTIL_SOURCES}
+        dbus-pollable-set-kqueue.c
+    )
+endif()
+
 set(libdbus_SOURCES
     ${DBUS_LIB_SOURCES}
     ${DBUS_SHARED_SOURCES}

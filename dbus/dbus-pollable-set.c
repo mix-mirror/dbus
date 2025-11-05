@@ -40,6 +40,13 @@ _dbus_pollable_set_new (int size_hint)
     return ret;
 #endif
 
+#ifdef DBUS_HAVE_KQUEUE_CPONFORK
+  ret = _dbus_pollable_set_kqueue_new ();
+
+  if (ret != NULL)
+    return ret;
+#endif
+
   ret = _dbus_pollable_set_poll_new (size_hint);
 
   if (ret != NULL)
