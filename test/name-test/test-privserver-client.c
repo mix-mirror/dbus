@@ -1,3 +1,11 @@
+/*
+ * Copyright (C) 2008 Colin Walters <walters@verbum.org>
+ * Copyright (C) 2009 Scott James Remnant <scott@netsplit.com>
+ * Copyright (C) 2011-2016 Collabora Ltd.
+ *
+ * SPDX-License-Identifier: AFL-2.1 OR GPL-2.0-or-later
+ */
+
 #include <config.h>
 #include <dbus/dbus-valgrind-internal.h>
 #include "../test-utils.h"

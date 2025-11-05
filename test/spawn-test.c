@@ -1,3 +1,9 @@
+/*
+ * Copyright (C) 2003  CodeFactory AB
+ *
+ * SPDX-License-Identifier: AFL-2.1 OR GPL-2.0-or-later
+ */
+
 #include <config.h>
 #include <dbus/dbus.h>
 

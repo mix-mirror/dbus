@@ -1,3 +1,13 @@
+/*
+ * Copyright (C) 2005 Novell, Inc.
+ * Copyright 2015 Ralf Habacker
+ * Copyright 2015 Collabora Ltd.
+ * Copyright 2017 Endless OS Foundation, LLC
+ * Copyright 2020 Félix Piédallu
+ *
+ * SPDX-License-Identifier: AFL-2.1 OR GPL-2.0-or-later
+ */
+
 #include <config.h>
 #include <stdio.h>
 #include <stdlib.h>

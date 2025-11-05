@@ -1,3 +1,9 @@
+/*
+ * Copyright 2005 Waldo Bastian <bastian@kde.org>
+ *
+ * SPDX-License-Identifier: AFL-2.1 OR GPL-2.0-or-later
+ */
+
 #include <config.h>
 #include "test-utils.h"
 

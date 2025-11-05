@@ -1,0 +1,82 @@
+version = 1
+SPDX-PackageName = "dbus"
+SPDX-PackageDownloadLocation = "https://gitlab.freedesktop.org/dbus/dbus"
+
+[[annotations]]
+path = ["subprojects/**.wrap"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = ["© 2022-2023 Meson contributors"]
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = ["test/data/invalid-config-files/*.conf"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = ["Copyright © 2018 Collabora Ltd"]
+SPDX-License-Identifier = "AFL-2.1 OR GPL-2.0-or-later"
+
+[[annotations]]
+path = [
+    "doc/*.xml.in",
+    "test/data/auth/*-script",
+    "test/data/invalid-config-files/badselinux-2.conf",
+    "test/data/invalid-config-files/truncated-file.conf",
+    "test/data/invalid-config-files/badselinux-1.conf"
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = ["(c) 2003 Red Hat, Inc."]
+SPDX-License-Identifier = "AFL-2.1 OR GPL-2.0-or-later"
+
+[[annotations]]
+path = [
+    "test/data/invalid-config-files/circular-1.conf",
+    "test/data/invalid-config-files/circular-2.conf",
+    "test/data/invalid-config-files/circular-3.conf",
+    "test/data/invalid-config-files/not-well-formed.conf"
+]
+precedence = "override"
+SPDX-License-Identifier = "LicenseRef-unknown"
+
+[[annotations]]
+path = [
+  "test/data/auth/external-username.auth-script",
+  "test/data/auth/external-auto.auth-script"
+]
+precedence = "override"
+SPDX-FileCopyrightText = ["Copyright © 2018 Collabora Ltd"]
+SPDX-License-Identifier = "AFL-2.1 OR GPL-2.0-or-later"
+
+[[annotations]]
+path = [
+  "test/data/auth/cookie-sha1-username.auth-script",
+  "test/data/auth/cookie-sha1.auth-script"
+]
+precedence = "override"
+SPDX-FileCopyrightText = ["Copyright © 2019 Collabora Ltd"]
+SPDX-License-Identifier = "AFL-2.1 OR GPL-2.0-or-later"
+
+[[annotations]]
+path = ["test/data/auth/fallback.auth-script"]
+precedence = "override"
+SPDX-License-Identifier = "LicenseRef-unknown"
+
+[[annotations]]
+path = [
+    "bus/*.in",
+    "test/data/equiv-config-files/*",
+    "test/data/equiv-config-files/basic/*",
+    "test/data/equiv-config-files/basic/basic.d/*",
+    "test/data/equiv-config-files/entities/*",
+    "test/data/equiv-config-files/entities/basic.d/*",
+    "test/data/invalid-service-files-system/*",
+    "test/data/sha-1/*",
+    "test/data/systemd-activation/*",
+    "test/data/valid-config-files-system/*",
+    "test/data/valid-config-files-system/system.d/*",
+    "test/data/valid-config-files/*",
+    "test/data/valid-config-files/basic.d/*",
+    "test/data/valid-service-files/*",
+    "test/data/valid-service-files-system/*",
+    "test/data/valid-service-files-system/system.d/*",
+]
+precedence = "aggregate"
+SPDX-License-Identifier = "LicenseRef-unknown"
