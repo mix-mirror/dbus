@@ -1,3 +1,7 @@
+/*
+ * SPDX-License-Identifier: AFL-2.1 OR GPL-2.0-or-later
+ */
+
 /* This is a process that just sleeps infinitely. */
 
 #include <config.h>
