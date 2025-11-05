@@ -1,3 +1,7 @@
+/*
+ * SPDX-License-Identifier: AFL-2.1 OR GPL-2.0-or-later
+ */
+
 #include <config.h>
 #include <dbus/dbus-valgrind-internal.h>
 #include "../test-utils.h"
