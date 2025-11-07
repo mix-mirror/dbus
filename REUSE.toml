@@ -7,3 +7,68 @@ path = ["subprojects/**.wrap"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = ["© 2022-2023 Meson contributors"]
 SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = [
+    "test/data/valid-messages/byteswap-fd-index.message-raw",
+    "test/data/valid-messages/byteswap-fd-index.message-raw.hex"
+]
+precedence = "override"
+SPDX-FileCopyrightText = ["2022 Evgeny Vereshchagin", "2022 Collabora Ltd."]
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = [
+    "test/data/valid-messages/minimal.message-raw"
+]
+precedence = "override"
+SPDX-FileCopyrightText = ["2022 Collabora Ltd."]
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = [
+    "test/data/invalid-messages/truncated-variant-sig.message-raw"
+]
+precedence = "override"
+SPDX-FileCopyrightText = ["2022 Collabora Ltd."]
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = [
+    "test/data/invalid-messages/mis-nested-sig.message-raw"
+]
+precedence = "override"
+SPDX-FileCopyrightText = ["2022 Evgeny Vereshchagin", "2022 Collabora Ltd."]
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = [
+    "test/data/invalid-messages/issue418.message-raw"
+]
+precedence = "override"
+SPDX-FileCopyrightText = ["2022 Evgeny Vereshchagin", "2022 Collabora Ltd."]
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = [
+    "test/data/invalid-messages/boolean-has-no-value.message-raw"
+]
+precedence = "override"
+SPDX-FileCopyrightText = ["2003 Red Hat, Inc."]
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = [
+    "test/data/invalid-messages/fixed-array-not-divisible.message-raw"
+]
+precedence = "override"
+SPDX-FileCopyrightText = ["2022 Evgeny Vereshchagin", "2022 Collabora Ltd."]
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = [
+    "test/data/invalid-messages/zero-length-variant-sig.message-raw"
+]
+precedence = "override"
+SPDX-FileCopyrightText = ["2022 Collabora Ltd."]
+SPDX-License-Identifier = "MIT"
