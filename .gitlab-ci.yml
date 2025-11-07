@@ -329,6 +329,15 @@ opensuse mingw64 meson debug:
     ci_test: "no"
     ci_variant: "debug"
 
+opensuse tumbleweed reuse:
+  image: opensuse/tumbleweed
+  stage: build
+  allow_failure: true
+  before_script:
+    - zypper --non-interactive install reuse
+  script:
+    - reuse --root /builds/dbus lint
+
 .ubuntu-build:
   extends: .unix-host-build
   image: "ubuntu:latest"
