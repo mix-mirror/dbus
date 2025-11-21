@@ -1,0 +1,10 @@
+TRACEPOINT_EVENT(
+    dbus,
+    verbose,
+    TP_ARGS(
+        const char*, my_string_arg
+    ),
+    TP_FIELDS(
+        ctf_string(my_string_field, my_string_arg)
+    )
+)

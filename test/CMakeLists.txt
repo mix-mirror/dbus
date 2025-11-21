@@ -74,6 +74,10 @@ set(manual-paths_SOURCES
     manual-paths.c
 )
 
+if(HAVE_LTTNG)
+    add_test_executable(test-lttng test-lttng.c dbus-testutils ${LTTNG_LIBRARIES})
+    add_lttng_tracepoint(test-lttng test-lttng.tp)
+endif()
 add_helper_executable(manual-dir-iter ${manual-dir-iter_SOURCES} ${DBUS_INTERNAL_LIBRARIES})
 add_helper_executable(test-service ${test-service_SOURCES} dbus-testutils)
 add_helper_executable(test-names ${test-names_SOURCES} dbus-testutils)
