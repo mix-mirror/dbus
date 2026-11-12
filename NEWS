@@ -163,6 +163,109 @@ Tests and CI:
   dbus!589;
   Simon McVittie, Gleb Popov, Ralf Habacker)
 
+dbus 1.16.4 (2026-11-12)
+========================
+
+Security support scope:
+
+• Add `SECURITY.md` documenting various security considerations
+  (dbus!597, dbus!603, dbus!606; Simon McVittie, ooonea)
+
+Denial-of-service fixes:
+
+• Prevent a denial-of-service vulnerability on the system bus:
+  if a privileged user was running a monitor such as `dbus-monitor --system`
+  or `busctl monitor --system`, then an unprivileged user could cause the
+  dbus-daemon to crash by arranging for delivery of a broadcast signal
+  from the dbus-daemon to be prevented, for example by filling up the
+  outgoing message queue towards a client that subscribed to it.
+  This vulnerability could be seen as an incomplete fix for CVE-2023-34969.
+  Thanks to Ma Penghui, KylinSoft Corporation.
+  (dbus#576, CVE-2026-120749; Simon McVittie, David King)
+
+• Prevent a denial-of-service vulnerability on the system bus in which
+  a client could cause a busy-loop by shutting down its socket while
+  outgoing messages were pending.
+  Thanks to AISLE in partnership with Red Hat.
+  (dbus#587, RHEL-239613, CVE ID pending; David King, Simon McVittie)
+
+• On platforms that implement `struct cmsgcred` (in practice this is
+  believed to mean FreeBSD and DragonFlyBSD), prevent a denial-of-service
+  in which a local `AF_UNIX` client could send unexpected file descriptors
+  to the system bus, which would have been ignored but not closed.
+  Thanks to AISLE in partnership with Red Hat.
+  (dbus#588, RHEL-239934, CVE ID pending; Simon McVittie, David King)
+
+• On platforms where poll() is emulated using select() (in practice this
+  is believed to mean macOS and Interix), prevent a denial-of-service in
+  which the system bus would crash if file descriptors above 1024 were
+  polled, and harden it against busy-looping if an invalid file descriptor
+  was polled.
+  Thanks to AISLE in partnership with Red Hat.
+  (dbus#584, RHEL-239610, CVE ID pending; Simon McVittie)
+
+• In servers listening on the `nonce-tcp:` transport, do not allow a client
+  to make the server block for more than 1 second.
+  Use of this transport on multi-user systems is discouraged.
+  Thanks to AISLE in partnership with Red Hat.
+  (dbus#586, RHEL-239294, CVE ID pending; David King, Simon McVittie)
+
+Bug fixes:
+
+• Avoid a busy-loop on non-Linux operating systems that can report
+  end-of-stream with POLLHUP but neither POLLIN nor POLLERR, such as
+  FreeBSD and OpenBSD (dbus#553, Gleb Popov)
+
+• Avoid a possible busy-loop when blocking on a DBusPendingCall with its
+  timeout set to DBUS_TIMEOUT_INFINITE
+  (dbus!524, dbus!525; Gleb Popov, Simon McVittie)
+
+• Avoid a rare assertion failure when waiting on a condition variable
+  (dbus#556, Johan Bolmsjö)
+
+• Defend against fd watches potentially being removed by a watch callback
+  (dbus#585, RHEL-239597; Simon McVittie, David King)
+
+• Fix a memory leak during autolaunching if dbus-launch or launchctl fails
+  (dbus!560, Oleg Tsvetkov)
+
+• Correct commented-out default auth_timeout in system.conf
+  (dbus!519, Simon McVittie)
+
+• When built with Meson, fix CMake builds that discover libdbus via
+  CMake rather than pkg-config metadata
+  (dbus!542, Zephyr Lykos)
+
+• When built with Meson and fallback subprojects are enabled,
+  disable unnecessary features and try to link them statically
+  (dbus!516, Simon McVittie)
+
+• On non-Linux platforms, never try to compile with Linux epoll support,
+  even if the OS has a compatibility interface for epoll
+  (dbus#557; Alan Coopersmith, Jonathan Perkins)
+
+• Fix compiler warnings in dbus-send(1)
+  (dbus!558, dbus!559; Simon McVittie)
+
+• Avoid deprecation warnings if compiled against Expat 2.9.0 or later
+  (dbus!561, dbus!564; Oleg Tsvetkov, Simon McVittie)
+
+• Update fallback subprojects for GLib and Expat
+  (dbus!426, dbus!429, dbus!576; Simon McVittie)
+
+Internal changes:
+
+• Skip a known-failing test on all FreeBSD versions
+  (dbus#308, Simon McVittie)
+
+• Fix test failure if DBUS_TEST_DBUS_MONITOR is unset
+  (dbus#424, Philip Withnall)
+
+• CI fixes
+  (dbus#546, dbus#547, dbus#548, dbus#558, dbus#572, dbus#578, dbus#580,
+  dbus#582, dbus!528, dbus!531, dbus!556, dbus!557, dbus!569, dbus!577,
+  dbus!580, dbus!589, dbus!599; Simon McVittie, Gleb Popov, Ralf Habacker)
+
 dbus 1.16.2 (2025-02-27)
 ========================
 
