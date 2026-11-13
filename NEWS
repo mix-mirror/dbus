@@ -124,7 +124,7 @@ Denial-of-service fixes:
   a client could cause a busy-loop by shutting down its socket while
   outgoing messages were pending.
   Thanks to AISLE in partnership with Red Hat.
-  (dbus#587, RHEL-239613, CVE ID pending; David King, Simon McVittie)
+  (dbus#587, CVE-2026-128987, RHEL-239613; David King, Simon McVittie)
 
 • On platforms that implement `struct cmsgcred` (in practice this is
   believed to mean FreeBSD and DragonFlyBSD), prevent a denial-of-service
@@ -145,7 +145,7 @@ Denial-of-service fixes:
   to make the server block for more than 1 second.
   Use of this transport on multi-user systems is discouraged.
   Thanks to AISLE in partnership with Red Hat.
-  (dbus#586, RHEL-239294, CVE ID pending; David King, Simon McVittie)
+  (dbus#586, CVE-2026-128886, RHEL-239294; David King, Simon McVittie)
 
 Bug fixes:
 
